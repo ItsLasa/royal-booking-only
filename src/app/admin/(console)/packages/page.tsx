@@ -133,15 +133,19 @@ export default function PackagesPage() {
   return (
     <div>
       <PageHeader
-        title="Packages"
-        description="Stay packages, pricing and availability"
+        title="Stay Packages & Offers"
+        description="Configure luxury packages, night requirements, inclusions, and policies"
         breadcrumbs={[{ label: "Packages" }]}
-        actions={<Button onClick={openCreate}>New package</Button>}
+        actions={<Button onClick={openCreate}>+ Add New Package</Button>}
       />
 
       {packages.length === 0 ? (
         <Card>
-          <EmptyState title="No packages yet" action={<Button onClick={openCreate}>Create first package</Button>} />
+          <EmptyState
+            title="No packages created yet"
+            description="Create your first stay package (e.g. Luxury Villa Retreat, Romantic Escape) to start accepting guest bookings."
+            action={<Button onClick={openCreate}>Create First Package</Button>}
+          />
         </Card>
       ) : (
         <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
@@ -150,15 +154,15 @@ export default function PackagesPage() {
               <CardBody className="flex flex-1 flex-col">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <h3 className="font-semibold">{pkg.name}</h3>
+                    <h3 className="font-normal text-on-surface dark:text-white">{pkg.name}</h3>
                     <p className="mt-0.5 line-clamp-2 text-sm text-on-surface-variant dark:text-neutral-400">{pkg.shortDescription}</p>
                   </div>
-                  <StatusBadge status={pkg.active ? "CONFIRMED" : "CANCELLED"} label={pkg.active ? "Active" : "Inactive"} />
+                  <StatusBadge status={pkg.active ? "ACTIVE" : "INACTIVE"} />
                 </div>
                 <div className="mt-4 flex items-end justify-between">
                   <div>
-                    <p className="text-2xl font-bold">{lkr(pkg.basePrice)}</p>
-                    <p className="text-xs text-on-surface-variant dark:text-neutral-400">{pkg.pricingType === "PER_NIGHT" ? "per night" : "per booking"}</p>
+                    <p className="text-2xl font-normal text-primary dark:text-emerald-400">{lkr(pkg.basePrice)}</p>
+                    <p className="text-xs text-on-surface-variant dark:text-neutral-400">{pkg.pricingType === "PER_NIGHT" ? "per night" : "per booking (flat stay)"}</p>
                   </div>
                   {pkg.featured && <StatusBadge status="URGENT" label="Featured" />}
                 </div>
@@ -169,7 +173,7 @@ export default function PackagesPage() {
                   {pkg.mealPlan && <span className="rounded-full bg-surface-container px-2 py-0.5 dark:bg-white/10">{pkg.mealPlan}</span>}
                 </div>
                 <div className="mt-5 flex gap-2 border-t border-outline-variant/40 pt-4 dark:border-white/10">
-                  <Button size="sm" variant="outline" className="flex-1" onClick={() => openEdit(pkg)}>Edit</Button>
+                  <Button size="sm" variant="outline" className="flex-1" onClick={() => openEdit(pkg)}>Edit Package</Button>
                   <Button size="sm" variant={pkg.active ? "ghost" : "outline"} className="flex-1" onClick={() => toggleActive(pkg)}>
                     {pkg.active ? "Deactivate" : "Activate"}
                   </Button>
@@ -183,68 +187,68 @@ export default function PackagesPage() {
       <Drawer
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
-        title={editing ? `Edit ${editing.name}` : "New package"}
+        title={editing ? `Edit Package: ${editing.name}` : "Create New Stay Package"}
         footer={
           <>
             <Button variant="outline" onClick={() => setDrawerOpen(false)}>Cancel</Button>
-            <Button onClick={save} loading={saving}>{editing ? "Save changes" : "Create package"}</Button>
+            <Button onClick={save} loading={saving}>{editing ? "Save Package Changes" : "Create Stay Package"}</Button>
           </>
         }
       >
         <form onSubmit={save} className="space-y-4">
-          <Field label="Name">
-            <Input value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} required />
+          <Field label="Package Name">
+            <Input value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} placeholder="e.g. Royal Luxury Villa Escape" required />
           </Field>
-          <Field label="Slug" hint="Lowercase letters, numbers and hyphens">
-            <Input value={form.slug} onChange={(event) => setForm({ ...form, slug: event.target.value })} pattern="[a-z0-9-]+" required />
+          <Field label="URL Identifier (Slug)" hint="Unique lowercase identifier, e.g. luxury-villa-escape">
+            <Input value={form.slug} onChange={(event) => setForm({ ...form, slug: event.target.value })} pattern="[a-z0-9-]+" placeholder="luxury-villa-escape" required />
           </Field>
-          <Field label="Short description">
-            <Input value={form.shortDescription} onChange={(event) => setForm({ ...form, shortDescription: event.target.value })} required />
+          <Field label="Short Summary (Card Preview)">
+            <Input value={form.shortDescription} onChange={(event) => setForm({ ...form, shortDescription: event.target.value })} placeholder="Brief 1-2 sentence overview for guests" required />
           </Field>
-          <Field label="Full description">
-            <Textarea value={form.fullDescription} onChange={(event) => setForm({ ...form, fullDescription: event.target.value })} required />
+          <Field label="Full Description & Inclusions">
+            <Textarea value={form.fullDescription} onChange={(event) => setForm({ ...form, fullDescription: event.target.value })} placeholder="Detailed package description, highlights, and amenities included..." required />
           </Field>
           <div className="grid grid-cols-2 gap-4">
-            <Field label="Base price (LKR)">
+            <Field label="Base Rate (LKR)">
               <Input type="number" min={0} value={form.basePrice} onChange={(event) => setForm({ ...form, basePrice: event.target.value })} required />
             </Field>
-            <Field label="Pricing type">
+            <Field label="Pricing Model">
               <Select value={form.pricingType} onChange={(event) => setForm({ ...form, pricingType: event.target.value })}>
-                <option value="PER_NIGHT">Per night</option>
-                <option value="PER_BOOKING">Per booking</option>
+                <option value="PER_NIGHT">Per Night</option>
+                <option value="PER_BOOKING">Per Stay (Flat Rate)</option>
               </Select>
             </Field>
-            <Field label="Included adults">
+            <Field label="Base Included Adults">
               <Input type="number" min={0} value={form.includedAdults} onChange={(event) => setForm({ ...form, includedAdults: event.target.value })} />
             </Field>
-            <Field label="Maximum guests">
+            <Field label="Maximum Guest Capacity">
               <Input type="number" min={1} value={form.maximumGuests} onChange={(event) => setForm({ ...form, maximumGuests: event.target.value })} />
             </Field>
-            <Field label="Minimum nights">
+            <Field label="Minimum Stay (Nights)">
               <Input type="number" min={1} value={form.minimumNights} onChange={(event) => setForm({ ...form, minimumNights: event.target.value })} />
             </Field>
-            <Field label="Maximum nights">
+            <Field label="Maximum Stay (Nights)">
               <Input type="number" min={1} value={form.maximumNights} onChange={(event) => setForm({ ...form, maximumNights: event.target.value })} />
             </Field>
-            <Field label="Deposit %">
+            <Field label="Required Deposit (%)">
               <Input type="number" min={0} max={100} value={form.depositPercentage} onChange={(event) => setForm({ ...form, depositPercentage: event.target.value })} />
             </Field>
-            <Field label="Display order">
+            <Field label="Display Priority Order">
               <Input type="number" value={form.displayOrder} onChange={(event) => setForm({ ...form, displayOrder: event.target.value })} />
             </Field>
           </div>
-          <Field label="Meal plan">
-            <Input value={form.mealPlan} onChange={(event) => setForm({ ...form, mealPlan: event.target.value })} placeholder="e.g. Breakfast included" />
+          <Field label="Meal Plan / Dining Inclusions">
+            <Input value={form.mealPlan} onChange={(event) => setForm({ ...form, mealPlan: event.target.value })} placeholder="e.g. Complimentary Daily Breakfast, Welcome Drink" />
           </Field>
-          <Field label="Cancellation policy">
-            <Textarea value={form.cancellationPolicy} onChange={(event) => setForm({ ...form, cancellationPolicy: event.target.value })} />
+          <Field label="Cancellation Policy Terms">
+            <Textarea value={form.cancellationPolicy} onChange={(event) => setForm({ ...form, cancellationPolicy: event.target.value })} placeholder="Policy details shown to guests during checkout..." />
           </Field>
-          <Field label="Terms">
-            <Textarea value={form.terms} onChange={(event) => setForm({ ...form, terms: event.target.value })} />
+          <Field label="Terms & Conditions">
+            <Textarea value={form.terms} onChange={(event) => setForm({ ...form, terms: event.target.value })} placeholder="General terms, check-in rules, security deposit details..." />
           </Field>
           <label className="flex items-center gap-2 text-sm">
             <input type="checkbox" checked={form.featured} onChange={(event) => setForm({ ...form, featured: event.target.checked })} className="h-4 w-4 accent-[#061b0e] dark:accent-emerald-500" />
-            Featured package
+            Feature this package on homepage and top of booking showcase
           </label>
         </form>
       </Drawer>

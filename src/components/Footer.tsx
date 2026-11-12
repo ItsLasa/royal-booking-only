@@ -4,8 +4,8 @@ import Icon from "./Icon";
 export default function Footer() {
   return (
     <footer className="bg-primary text-on-primary w-full">
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-gutter px-margin-mobile md:px-margin-desktop py-section-gap max-w-7xl mx-auto">
-        <div className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-gutter px-margin-mobile md:px-margin-desktop py-section-gap max-w-7xl mx-auto">
+        <div className="space-y-6 max-w-md">
           <h3 className="font-headline-lg text-headline-lg text-on-primary">
             Royal Mansion
           </h3>
@@ -14,6 +14,8 @@ export default function Footer() {
             unmatched mountain living experience for the discerning traveler.
           </p>
         </div>
+
+        {/* Navigation - Commented out per client request
         <div className="space-y-4 md:pl-10">
           <h4 className="font-label-lg text-label-lg uppercase tracking-widest text-tertiary-fixed">
             Navigation
@@ -53,7 +55,9 @@ export default function Footer() {
             </li>
           </ul>
         </div>
-        <div className="space-y-4 md:pl-10">
+        */}
+
+        <div className="space-y-4 md:pl-10 md:justify-self-end">
           <h4 className="font-label-lg text-label-lg uppercase tracking-widest text-tertiary-fixed">
             Contact
           </h4>
@@ -72,6 +76,8 @@ export default function Footer() {
             </li>
           </ul>
         </div>
+
+        {/* Newsletter - Commented out per client request
         <div className="space-y-6">
           <h4 className="font-label-lg text-label-lg uppercase tracking-widest text-tertiary-fixed">
             Newsletter
@@ -90,6 +96,7 @@ export default function Footer() {
             </button>
           </div>
         </div>
+        */}
       </div>
       <div className="max-w-7xl mx-auto mt-10 pt-10 border-t border-white/10 flex flex-col md:flex-row justify-between items-center gap-6 text-sm text-on-primary/60 px-margin-mobile md:px-margin-desktop pb-10">
         <p>© 2024 Royal Mansion Resort Villa. All Rights Reserved.</p>

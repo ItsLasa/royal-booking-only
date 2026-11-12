@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { ColumnDef } from "@tanstack/react-table";
 import { adminGet, adminPatch, adminPost } from "@/lib/admin/api";
 import type { Paginated, Payment } from "@/lib/admin/types";
-import { formatDateTime, lkr } from "@/lib/admin/format";
+import { formatDateTime, lkr, PAYMENT_PROVIDER_LABELS, PAYMENT_STATUS_LABELS, humanize } from "@/lib/admin/format";
 import { DataTable } from "@/components/admin/DataTable";
 import { Button, EmptyState, Field, Input, PageHeader, Pagination, Select, StatusBadge } from "@/components/admin/ui";
 import { ConfirmDialog, Modal } from "@/components/admin/Modal";
@@ -96,14 +96,18 @@ export default function PaymentsPage() {
 
   const columns = useMemo<ColumnDef<Payment, unknown>[]>(
     () => [
-      { header: "Reference", accessorKey: "booking.reference", cell: (info) => <span className="font-semibold">{String(info.getValue() ?? "—")}</span> },
-      { header: "Guest", cell: (info) => `${info.row.original.booking?.guest?.firstName ?? ""} ${info.row.original.booking?.guest?.lastName ?? ""}`.trim() || "—" },
-      { header: "Provider", accessorKey: "provider", cell: (info) => <span className="capitalize">{String(info.getValue()).replace("_", " ").toLowerCase()}</span> },
-      { header: "Amount", accessorKey: "amount", cell: (info) => <span className="font-semibold">{lkr(String(info.getValue()))}</span> },
-      { header: "Status", accessorKey: "status", cell: (info) => <StatusBadge status={String(info.getValue())} /> },
-      { header: "Verified", accessorKey: "verified", cell: (info) => (info.getValue() ? "✓" : "—") },
+      { header: "Reservation Ref", accessorKey: "booking.reference", cell: (info) => <span className="font-normal text-primary dark:text-emerald-400">{String(info.getValue() ?? "—")}</span> },
+      { header: "Guest Name", cell: (info) => `${info.row.original.booking?.guest?.firstName ?? ""} ${info.row.original.booking?.guest?.lastName ?? ""}`.trim() || "—" },
+      { header: "Payment Gateway", accessorKey: "provider", cell: (info) => <span>{PAYMENT_PROVIDER_LABELS[String(info.getValue())] ?? humanize(String(info.getValue()))}</span> },
+      { header: "Amount Paid", accessorKey: "amount", cell: (info) => <span className="font-normal">{lkr(String(info.getValue()))}</span> },
+      { header: "Payment Status", accessorKey: "status", cell: (info) => <StatusBadge status={String(info.getValue())} /> },
+      {
+        header: "Bank Slip Status",
+        accessorKey: "verified",
+        cell: (info) => (info.getValue() ? <span className="text-xs font-normal text-emerald-600 dark:text-emerald-400">✓ Verified</span> : <span className="text-xs text-neutral-400">Unverified</span>),
+      },
       { header: "Method", accessorKey: "paymentMethod", cell: (info) => String(info.getValue() ?? "—") },
-      { header: "Date", accessorKey: "createdAt", cell: (info) => formatDateTime(String(info.getValue())) },
+      { header: "Transaction Date", accessorKey: "createdAt", cell: (info) => formatDateTime(String(info.getValue())) },
       {
         header: "Actions",
         cell: (info) => {
@@ -111,10 +115,10 @@ export default function PaymentsPage() {
           return (
             <div className="flex gap-1.5">
               {payment.provider === "BANK_TRANSFER" && !payment.verified && (
-                <Button size="sm" variant="outline" onClick={() => setVerifyTarget(payment)}>Verify</Button>
+                <Button size="sm" variant="outline" onClick={() => setVerifyTarget(payment)}>Verify Slip</Button>
               )}
               {payment.verified && payment.status !== "REFUNDED" && (
-                <Button size="sm" variant="ghost" onClick={() => setRefundTarget(payment)}>Refund</Button>
+                <Button size="sm" variant="ghost" onClick={() => setRefundTarget(payment)}>Issue Refund</Button>
               )}
             </div>
           );
@@ -127,19 +131,23 @@ export default function PaymentsPage() {
   return (
     <div>
       <PageHeader
-        title="Payments"
-        description="Verify bank transfers, record cash and process refunds"
+        title="Payments & Billing Transactions"
+        description="Review payment gateway transactions, verify bank transfer slips, record cash payments, and issue refunds"
         breadcrumbs={[{ label: "Payments" }]}
-        actions={<Button onClick={() => setManualOpen(true)}>Record payment</Button>}
+        actions={<Button onClick={() => setManualOpen(true)}>+ Record Manual Payment</Button>}
       />
 
       <div className="mb-4 grid gap-3 md:grid-cols-[1fr_auto_auto]">
-        <Input placeholder="Search booking reference…" value={search} onChange={(event) => { setSearch(event.target.value); setPage(1); }} />
-        <Select value={status} onChange={(event) => { setStatus(event.target.value); setPage(1); }} className="md:w-44">
-          {STATUSES.map((value) => <option key={value} value={value}>{value === "" ? "All statuses" : value.replace(/_/g, " ")}</option>)}
+        <Input placeholder="Search by reservation reference number…" value={search} onChange={(event) => { setSearch(event.target.value); setPage(1); }} />
+        <Select value={status} onChange={(event) => { setStatus(event.target.value); setPage(1); }} className="md:w-48">
+          {STATUSES.map((value) => (
+            <option key={value} value={value}>{value === "" ? "All Payment Statuses" : (PAYMENT_STATUS_LABELS[value] ?? value)}</option>
+          ))}
         </Select>
-        <Select value={provider} onChange={(event) => { setProvider(event.target.value); setPage(1); }} className="md:w-44">
-          {PROVIDERS.map((value) => <option key={value} value={value}>{value === "" ? "All providers" : value.replace(/_/g, " ")}</option>)}
+        <Select value={provider} onChange={(event) => { setProvider(event.target.value); setPage(1); }} className="md:w-48">
+          {PROVIDERS.map((value) => (
+            <option key={value} value={value}>{value === "" ? "All Payment Methods" : (PAYMENT_PROVIDER_LABELS[value] ?? value)}</option>
+          ))}
         </Select>
       </div>
 
@@ -147,7 +155,7 @@ export default function PaymentsPage() {
         <EmptyState title="Could not load payments" description={error} />
       ) : (
         <div className="overflow-hidden rounded-xl border border-outline-variant/60 bg-white dark:border-white/10 dark:bg-[#12171c]">
-          <DataTable columns={columns} data={data?.items ?? []} loading={loading} emptyTitle="No payments found" />
+          <DataTable columns={columns} data={data?.items ?? []} loading={loading} emptyTitle="No payments recorded yet" emptyDescription="Online and manual transactions will show here." />
           {data && <Pagination page={data.page} pages={data.pages} total={data.total} onChange={setPage} />}
         </div>
       )}
@@ -156,9 +164,9 @@ export default function PaymentsPage() {
         open={Boolean(verifyTarget)}
         onClose={() => setVerifyTarget(null)}
         onConfirm={() => verifyTarget && verify(verifyTarget)}
-        title="Verify payment"
-        message={`Mark the ${lkr(verifyTarget?.amount)} ${verifyTarget?.provider.replace("_", " ")} payment as verified? This confirms the booking.`}
-        confirmLabel="Verify payment"
+        title="Verify Bank Transfer Payment"
+        message={`Mark the ${lkr(verifyTarget?.amount)} bank transfer payment as verified? This confirms the reservation and notifies the guest.`}
+        confirmLabel="Confirm Verification"
         loading={acting}
         danger={false}
       />
@@ -167,44 +175,41 @@ export default function PaymentsPage() {
         open={Boolean(refundTarget)}
         onClose={() => setRefundTarget(null)}
         onConfirm={refund}
-        title="Record refund"
-        message={`Refund ${lkr(refundTarget?.amount)} for ${refundTarget?.booking?.reference}? A refund note is added and audited.`}
-        confirmLabel="Record refund"
+        title="Record / Process Refund"
+        message={`Issue a recorded refund of ${lkr(refundTarget?.amount)} for reservation ${refundTarget?.booking?.reference}? This action is audited.`}
+        confirmLabel="Confirm Refund"
         loading={acting}
       />
 
       <Modal
         open={manualOpen}
         onClose={() => setManualOpen(false)}
-        title="Record manual payment"
+        title="Record Manual Payment"
         footer={
           <>
             <Button variant="outline" onClick={() => setManualOpen(false)}>Cancel</Button>
-            <Button onClick={recordManual} loading={acting} disabled={!bookingId || !amount}>Record</Button>
+            <Button onClick={recordManual} loading={acting} disabled={!bookingId || !amount}>Save Payment</Button>
           </>
         }
       >
         <form onSubmit={recordManual} className="space-y-4">
-          <Field label="Booking reference or ID">
-            <Input value={bookingId} onChange={(event) => setBookingId(event.target.value)} placeholder="Booking ID" required />
+          <Field label="Reservation Reference or Booking ID">
+            <Input value={bookingId} onChange={(event) => setBookingId(event.target.value)} placeholder="e.g. RMV-XXXXXX or UUID" required />
           </Field>
           <div className="grid grid-cols-2 gap-4">
-            <Field label="Amount (LKR)">
-              <Input type="number" min={0} step="0.01" value={amount} onChange={(event) => setAmount(event.target.value)} required />
+            <Field label="Amount Paid (LKR)">
+              <Input type="number" min={0} step="0.01" value={amount} onChange={(event) => setAmount(event.target.value)} placeholder="e.g. 50000" required />
             </Field>
-            <Field label="Method">
+            <Field label="Payment Method">
               <Select value={method} onChange={(event) => setMethod(event.target.value)}>
-                <option value="CASH">Cash</option>
-                <option value="BANK_TRANSFER">Bank transfer</option>
+                <option value="CASH">Cash at Front Desk</option>
+                <option value="BANK_TRANSFER">Direct Bank Transfer</option>
               </Select>
             </Field>
           </div>
-          <Field label="Note (optional)">
-            <Input value={note} onChange={(event) => setNote(event.target.value)} />
+          <Field label="Staff Note / Receipt Reference (Optional)">
+            <Input value={note} onChange={(event) => setNote(event.target.value)} placeholder="e.g. Bank slip reference #12345 or Cash receipt #098" />
           </Field>
-          <p className="text-xs text-on-surface-variant dark:text-neutral-500">
-            Tip: open a booking and copy its ID from the URL for accurate recording.
-          </p>
         </form>
       </Modal>
     </div>

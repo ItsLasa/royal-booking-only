@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { adminGet } from "@/lib/admin/api";
 import type { DashboardData } from "@/lib/admin/types";
-import { formatDate, lkr, relativeTime } from "@/lib/admin/format";
+import { formatDate, lkr, relativeTime, humanize, PAYMENT_PROVIDER_LABELS } from "@/lib/admin/format";
 import { Card, CardBody, CardHeader, EmptyState, PageHeader, Skeleton, StatCard, Button, StatusBadge } from "@/components/admin/ui";
 
 export default function AdminDashboardPage() {
@@ -51,15 +51,15 @@ export default function AdminDashboardPage() {
   return (
     <div>
       <PageHeader
-        title="Dashboard"
-        description="Resort operations at a glance"
+        title="Operations Dashboard"
+        description="Real-time occupancy, revenue overview, and daily arrivals"
         actions={
           <>
             <Link href="/admin/bookings/new">
-              <Button>New booking</Button>
+              <Button>+ New Reservation</Button>
             </Link>
             <Link href="/admin/calendar">
-              <Button variant="outline">Block dates</Button>
+              <Button variant="outline">Block Room Dates</Button>
             </Link>
           </>
         }
@@ -67,20 +67,20 @@ export default function AdminDashboardPage() {
 
       {/* KPI cards */}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard label="Today's revenue" value={lkr(kpis.todayRevenue)} sub={`${lkr(kpis.todayPaid)} collected`} tone="success" />
-        <StatCard label="Occupancy" value={`${kpis.occupancyPct}%`} sub={`${kpis.availableRooms} of ${charts.occupancy.available + charts.occupancy.inHouse} rooms available`} />
-        <StatCard label="Check-ins today" value={kpis.checkInsToday} sub={`${kpis.checkOutsToday} check-outs`} tone="warning" />
-        <StatCard label="Total guests" value={kpis.totalGuests} sub={`${kpis.totalBookings} bookings all time`} />
-        <StatCard label="Pending bookings" value={kpis.pendingBookings} sub="Holds awaiting confirmation" tone="warning" />
-        <StatCard label="Pending payments" value={kpis.pendingPayments} sub="Unpaid or partially paid" tone="danger" />
-        <StatCard label="Rooms available" value={kpis.availableRooms} sub={`${charts.occupancy.inHouse} in house`} tone="success" />
-        <StatCard label="Today's check-outs" value={kpis.checkOutsToday} sub="Due to depart" />
+        <StatCard label="Today's Revenue" value={lkr(kpis.todayRevenue)} sub={`${lkr(kpis.todayPaid)} collected`} tone="success" />
+        <StatCard label="Current Occupancy" value={`${kpis.occupancyPct}%`} sub={`${kpis.availableRooms} of ${charts.occupancy.available + charts.occupancy.inHouse} rooms available`} />
+        <StatCard label="Check-ins Today" value={kpis.checkInsToday} sub={`${kpis.checkOutsToday} departures scheduled`} tone="warning" />
+        <StatCard label="Registered Guests" value={kpis.totalGuests} sub={`${kpis.totalBookings} total reservations`} />
+        <StatCard label="Pending Reservations" value={kpis.pendingBookings} sub="Holds awaiting confirmation" tone="warning" />
+        <StatCard label="Pending Payments" value={kpis.pendingPayments} sub="Unpaid or partially paid" tone="danger" />
+        <StatCard label="Available Rooms" value={kpis.availableRooms} sub={`${charts.occupancy.inHouse} currently occupied`} tone="success" />
+        <StatCard label="Departures Today" value={kpis.checkOutsToday} sub="Due to check out" />
       </div>
 
       {/* Charts */}
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
         <Card>
-          <CardHeader title="Revenue trend" subtitle="Gross revenue per day (last 6 months)" />
+          <CardHeader title="Revenue Trend" subtitle="Daily gross revenue over the past 6 months" />
           <CardBody>
             <ResponsiveContainer width="100%" height={260}>
               <AreaChart data={revenueChartData}>
@@ -101,7 +101,7 @@ export default function AdminDashboardPage() {
         </Card>
 
         <Card>
-          <CardHeader title="Booking trend" subtitle="New bookings per day (last 3 months)" />
+          <CardHeader title="Booking Volume Trend" subtitle="Daily reservations over the past 3 months" />
           <CardBody>
             <ResponsiveContainer width="100%" height={260}>
               <BarChart data={bookingChartData}>
@@ -119,16 +119,16 @@ export default function AdminDashboardPage() {
       {/* Widgets */}
       <div className="mt-6 grid gap-6 lg:grid-cols-2 xl:grid-cols-3">
         <Card>
-          <CardHeader title="Upcoming arrivals" subtitle="Today and future check-ins" action={<Link href="/admin/bookings" className="text-xs font-normal text-[#061b0e] hover:underline dark:text-emerald-400">View all</Link>} />
+          <CardHeader title="Upcoming Arrivals" subtitle="Guests scheduled to arrive today and upcoming dates" action={<Link href="/admin/bookings" className="text-xs font-normal text-[#061b0e] hover:underline dark:text-emerald-400">View All</Link>} />
           <CardBody className="space-y-3">
-            {arrivals.length === 0 && <EmptyState title="No upcoming arrivals" />}
+            {arrivals.length === 0 && <EmptyState title="No upcoming arrivals" description="No new check-ins scheduled for the immediate upcoming days." />}
             {arrivals.map((booking) => (
               <Link key={booking.id} href={`/admin/bookings/${booking.id}`} className="flex items-center gap-3 rounded-lg p-2 transition-colors hover:bg-surface-container/60 dark:hover:bg-white/5">
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#061b0e]/5 text-xs font-normal text-[#061b0e] dark:bg-white/10 dark:text-white">
                   {booking.guest ? `${booking.guest.firstName[0]}${booking.guest.lastName[0]}` : "?"}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium">
+                  <p className="truncate text-sm font-normal">
                     {booking.guest?.firstName} {booking.guest?.lastName}
                   </p>
                   <p className="truncate text-xs text-on-surface-variant dark:text-neutral-400">
@@ -142,9 +142,9 @@ export default function AdminDashboardPage() {
         </Card>
 
         <Card>
-          <CardHeader title="Recent bookings" action={<Link href="/admin/bookings" className="text-xs font-normal text-[#061b0e] hover:underline dark:text-emerald-400">View all</Link>} />
+          <CardHeader title="Recent Reservations" action={<Link href="/admin/bookings" className="text-xs font-normal text-[#061b0e] hover:underline dark:text-emerald-400">View All</Link>} />
           <CardBody className="space-y-3">
-            {recentBookings.length === 0 && <EmptyState title="No bookings yet" />}
+            {recentBookings.length === 0 && <EmptyState title="No reservations yet" description="New guest bookings will appear here automatically." />}
             {recentBookings.map((booking) => (
               <Link key={booking.id} href={`/admin/bookings/${booking.id}`} className="flex items-center justify-between gap-3 rounded-lg p-2 transition-colors hover:bg-surface-container/60 dark:hover:bg-white/5">
                 <div className="min-w-0">
@@ -152,7 +152,7 @@ export default function AdminDashboardPage() {
                   <p className="truncate text-xs text-on-surface-variant dark:text-neutral-400">{booking.guest?.firstName} {booking.guest?.lastName} · {booking.createdAt ? relativeTime(booking.createdAt) : ""}</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-sm font-semibold">{lkr(booking.grandTotal)}</p>
+                  <p className="text-sm font-normal">{lkr(booking.grandTotal)}</p>
                   <StatusBadge status={booking.paymentStatus} />
                 </div>
               </Link>
@@ -161,17 +161,17 @@ export default function AdminDashboardPage() {
         </Card>
 
         <Card>
-          <CardHeader title="Recent payments" action={<Link href="/admin/payments" className="text-xs font-medium text-[#061b0e] hover:underline dark:text-emerald-400">View all</Link>} />
+          <CardHeader title="Recent Transactions" action={<Link href="/admin/payments" className="text-xs font-normal text-[#061b0e] hover:underline dark:text-emerald-400">View All</Link>} />
           <CardBody className="space-y-3">
-            {recentPayments.length === 0 && <EmptyState title="No payments yet" />}
+            {recentPayments.length === 0 && <EmptyState title="No payments yet" description="Payment receipts and bank slip uploads will appear here." />}
             {recentPayments.map((payment) => (
               <div key={payment.id} className="flex items-center justify-between gap-3 rounded-lg p-2">
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-medium">{payment.booking?.reference ?? "—"}</p>
-                  <p className="truncate text-xs text-on-surface-variant dark:text-neutral-400">{payment.provider.replace("_", " ")} · {relativeTime(payment.createdAt)}</p>
+                  <p className="truncate text-sm font-normal">{payment.booking?.reference ?? "—"}</p>
+                  <p className="truncate text-xs text-on-surface-variant dark:text-neutral-400">{PAYMENT_PROVIDER_LABELS[payment.provider] ?? humanize(payment.provider)} · {relativeTime(payment.createdAt)}</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-sm font-semibold">{lkr(payment.amount)}</p>
+                  <p className="text-sm font-normal">{lkr(payment.amount)}</p>
                   <StatusBadge status={payment.status} />
                 </div>
               </div>
@@ -182,9 +182,9 @@ export default function AdminDashboardPage() {
 
       {/* Activity */}
       <Card className="mt-6">
-        <CardHeader title="Recent activity" subtitle="Latest admin actions (audit trail)" />
+        <CardHeader title="Recent System Activity" subtitle="Real-time log of administrative actions and updates" />
         <CardBody>
-          {notifications.length === 0 && <EmptyState title="No recent activity" />}
+          {notifications.length === 0 && <EmptyState title="No recent activity" description="Staff and automated system events will be recorded here." />}
           <div className="space-y-3">
             {notifications.map((entry) => (
               <div key={entry.id} className="flex items-start gap-3 rounded-lg p-2">
@@ -193,10 +193,10 @@ export default function AdminDashboardPage() {
                 </span>
                 <div className="min-w-0 flex-1">
                   <p className="text-sm">
-                    <span className="font-medium">{entry.adminUser?.name ?? "System"}</span>{" "}
-                    <span className="text-on-surface-variant dark:text-neutral-400">{entry.action.replace(/_/g, " ").toLowerCase()}</span>
+                    <span className="font-normal">{entry.adminUser?.name ?? "System"}</span>{" "}
+                    <span className="text-on-surface-variant dark:text-neutral-300">{humanize(entry.action)}</span>
                   </p>
-                  <p className="text-xs text-on-surface-variant/70 dark:text-neutral-500">{entry.entityType} · {relativeTime(entry.createdAt)}</p>
+                  <p className="text-xs text-on-surface-variant/70 dark:text-neutral-500">{humanize(entry.entityType)} · {relativeTime(entry.createdAt)}</p>
                 </div>
               </div>
             ))}

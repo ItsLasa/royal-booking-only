@@ -4,9 +4,25 @@ import { useEffect, useMemo, useState } from "react";
 import { ColumnDef } from "@tanstack/react-table";
 import { adminGet } from "@/lib/admin/api";
 import type { AuditLogEntry, Paginated } from "@/lib/admin/types";
-import { formatDateTime, relativeTime } from "@/lib/admin/format";
+import { formatDateTime, relativeTime, humanize } from "@/lib/admin/format";
 import { DataTable } from "@/components/admin/DataTable";
 import { EmptyState, Input, PageHeader, Pagination, Select } from "@/components/admin/ui";
+
+const ENTITY_LABELS: Record<string, string> = {
+  Booking: "Reservations & Bookings",
+  Payment: "Payments & Billing",
+  AdminUser: "Staff Accounts",
+  Unit: "Rooms & Villa Units",
+  Package: "Stay Packages",
+  AddOn: "Available Extras",
+  SeasonalRate: "Seasonal Rates",
+  DateRateOverride: "Date Rate Overrides",
+  AvailabilityBlock: "Availability Blocks",
+  HousekeepingTask: "Housekeeping Tasks",
+  MaintenanceIssue: "Maintenance Issues",
+  AdminSetting: "Resort Settings",
+  AdminSession: "Staff Login Sessions",
+};
 
 export default function AuditPage() {
   const [data, setData] = useState<Paginated<AuditLogEntry> | null>(null);
@@ -34,29 +50,29 @@ export default function AuditPage() {
   const columns = useMemo<ColumnDef<AuditLogEntry, unknown>[]>(
     () => [
       {
-        header: "User",
+        header: "Staff Member",
         cell: (info) => {
           const user = info.row.original.adminUser;
           return (
             <div className="flex items-center gap-2.5">
-              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#061b0e]/5 text-[10px] font-bold dark:bg-white/10">
+              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#061b0e]/5 text-[10px] font-normal dark:bg-white/10">
                 {user?.name?.[0] ?? "S"}
               </span>
               <div>
-                <p className="text-sm font-medium">{user?.name ?? "System"}</p>
+                <p className="text-sm font-normal">{user?.name ?? "System"}</p>
                 <p className="text-xs text-on-surface-variant dark:text-neutral-500">{user?.role ?? ""}</p>
               </div>
             </div>
           );
         },
       },
-      { header: "Action", accessorKey: "action", cell: (info) => <span className="font-mono text-xs">{String(info.getValue()).replace(/_/g, " ")}</span> },
-      { header: "Resource", accessorKey: "entityType", cell: (info) => String(info.getValue()) },
-      { header: "ID", accessorKey: "entityId", cell: (info) => <span className="font-mono text-xs text-on-surface-variant dark:text-neutral-400">{String(info.getValue() ?? "—")}</span> },
-      { header: "IP", accessorKey: "ipAddress", cell: (info) => String(info.getValue() ?? "—") },
-      { header: "When", accessorKey: "createdAt", cell: (info) => <span title={formatDateTime(String(info.getValue()))}>{relativeTime(String(info.getValue()))}</span> },
+      { header: "Action Performed", accessorKey: "action", cell: (info) => <span className="font-medium text-xs text-primary dark:text-emerald-400">{humanize(String(info.getValue()))}</span> },
+      { header: "Entity / Resource", accessorKey: "entityType", cell: (info) => <span>{ENTITY_LABELS[String(info.getValue())] ?? String(info.getValue())}</span> },
+      { header: "Record ID", accessorKey: "entityId", cell: (info) => <span className="font-mono text-xs text-on-surface-variant dark:text-neutral-400">{String(info.getValue() ?? "—")}</span> },
+      { header: "IP Address", accessorKey: "ipAddress", cell: (info) => String(info.getValue() ?? "—") },
+      { header: "Timestamp", accessorKey: "createdAt", cell: (info) => <span title={formatDateTime(String(info.getValue()))}>{relativeTime(String(info.getValue()))}</span> },
       {
-        header: "Details",
+        header: "Change Details",
         cell: (info) => {
           const values = info.row.original.newValues ?? info.row.original.oldValues;
           if (!values) return <span className="text-on-surface-variant dark:text-neutral-500">—</span>;
@@ -70,14 +86,18 @@ export default function AuditPage() {
 
   return (
     <div>
-      <PageHeader title="Audit logs" description="Every admin action, recorded and immutable" breadcrumbs={[{ label: "Audit Logs" }]} />
+      <PageHeader
+        title="Activity & Audit Trail"
+        description="Immutable real-time audit trail of all staff activities, reservation changes, and configuration updates"
+        breadcrumbs={[{ label: "Audit Logs" }]}
+      />
 
       <div className="mb-4 grid gap-3 md:grid-cols-[1fr_auto]">
-        <Input placeholder="Search action, resource or entity…" value={search} onChange={(event) => { setSearch(event.target.value); setPage(1); }} />
-        <Select value={entityType} onChange={(event) => { setEntityType(event.target.value); setPage(1); }} className="md:w-52">
-          <option value="">All resources</option>
-          {["Booking", "Payment", "AdminUser", "Unit", "Package", "SeasonalRate", "DateRateOverride", "AvailabilityBlock", "HousekeepingTask", "MaintenanceIssue", "AdminSetting", "AdminSession"].map((value) => (
-            <option key={value} value={value}>{value}</option>
+        <Input placeholder="Search by action, staff name, or resource ID…" value={search} onChange={(event) => { setSearch(event.target.value); setPage(1); }} />
+        <Select value={entityType} onChange={(event) => { setEntityType(event.target.value); setPage(1); }} className="md:w-60">
+          <option value="">All System Resources</option>
+          {Object.entries(ENTITY_LABELS).map(([value, label]) => (
+            <option key={value} value={value}>{label}</option>
           ))}
         </Select>
       </div>

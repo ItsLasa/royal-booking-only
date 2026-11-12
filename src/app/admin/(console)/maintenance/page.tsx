@@ -102,11 +102,11 @@ export default function MaintenancePage() {
           if (index < STATUS_FLOW.length - 1) {
             return (
               <Button size="sm" variant="outline" onClick={() => advance(issue, STATUS_FLOW[index + 1])} loading={acting}>
-                {STATUS_FLOW[index + 1] === "ASSIGNED" ? "Assign" : STATUS_FLOW[index + 1] === "IN_PROGRESS" ? "Start" : "Complete"}
+                {STATUS_FLOW[index + 1] === "ASSIGNED" ? "Assign Staff" : STATUS_FLOW[index + 1] === "IN_PROGRESS" ? "Start Repair" : "Mark Resolved"}
               </Button>
             );
           }
-          return <span className="text-xs text-on-surface-variant dark:text-neutral-500">Resolved {formatDate(issue.resolvedAt)}</span>;
+          return <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">Resolved {formatDate(issue.resolvedAt)}</span>;
         },
       },
     ],
@@ -116,28 +116,28 @@ export default function MaintenancePage() {
   return (
     <div>
       <PageHeader
-        title="Maintenance"
-        description="Track and resolve property maintenance issues"
+        title="Property Maintenance & Repairs"
+        description="Track physical repairs, equipment servicing, and room maintenance tasks"
         breadcrumbs={[{ label: "Maintenance" }]}
-        actions={<Button onClick={() => setCreateOpen(true)}>Report issue</Button>}
+        actions={<Button onClick={() => setCreateOpen(true)}>+ Report Maintenance Issue</Button>}
       />
 
-      <div className="mb-4 grid gap-3 sm:grid-cols-2 md:w-[420px]">
+      <div className="mb-4 grid gap-3 sm:grid-cols-2 md:w-[460px]">
         <Select value={status} onChange={(event) => { setStatus(event.target.value); setPage(1); }}>
-          <option value="">All statuses</option>
+          <option value="">All Issue Statuses</option>
           {STATUS_FLOW.map((value) => <option key={value} value={value}>{MAINTENANCE_STATUS_LABELS[value]}</option>)}
         </Select>
         <Select value={priority} onChange={(event) => { setPriority(event.target.value); setPage(1); }}>
-          <option value="">All priorities</option>
+          <option value="">All Priority Levels</option>
           {["LOW", "MEDIUM", "HIGH", "URGENT"].map((value) => <option key={value} value={value}>{MAINTENANCE_PRIORITY_LABELS[value]}</option>)}
         </Select>
       </div>
 
       {error ? (
-        <EmptyState title="Could not load issues" description={error} />
+        <EmptyState title="Could not load maintenance issues" description={error} />
       ) : (
         <div className="overflow-hidden rounded-xl border border-outline-variant/60 bg-white dark:border-white/10 dark:bg-[#12171c]">
-          <DataTable columns={columns} data={data?.items ?? []} loading={loading} emptyTitle="No maintenance issues" emptyDescription="Report the first issue to get started." />
+          <DataTable columns={columns} data={data?.items ?? []} loading={loading} emptyTitle="No maintenance issues reported" emptyDescription="Report any repair or servicing tasks to track them here." />
           {data && <Pagination page={data.page} pages={data.pages} total={data.total} onChange={setPage} />}
         </div>
       )}
@@ -145,30 +145,30 @@ export default function MaintenancePage() {
       <Modal
         open={createOpen}
         onClose={() => setCreateOpen(false)}
-        title="Report maintenance issue"
+        title="Report Maintenance Issue"
         footer={
           <>
             <Button variant="outline" onClick={() => setCreateOpen(false)}>Cancel</Button>
-            <Button onClick={createIssue} loading={acting}>Report issue</Button>
+            <Button onClick={createIssue} loading={acting}>Submit Maintenance Report</Button>
           </>
         }
       >
         <form onSubmit={createIssue} className="space-y-4">
-          <Field label="Title">
-            <Input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="e.g. Pool pump not running" required minLength={3} />
+          <Field label="Issue Summary / Title">
+            <Input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="e.g. Master Villa AC leaking or Pool pump servicing" required minLength={3} />
           </Field>
-          <Field label="Description">
-            <Textarea value={description} onChange={(event) => setDescription(event.target.value)} />
+          <Field label="Detailed Description & Location Details">
+            <Textarea value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Describe the symptom, location in the room, or parts needed..." />
           </Field>
           <div className="grid grid-cols-2 gap-4">
-            <Field label="Priority">
+            <Field label="Urgency / Priority Level">
               <Select value={issuePriority} onChange={(event) => setIssuePriority(event.target.value)}>
                 {["LOW", "MEDIUM", "HIGH", "URGENT"].map((value) => <option key={value} value={value}>{MAINTENANCE_PRIORITY_LABELS[value]}</option>)}
               </Select>
             </Field>
-            <Field label="Room (optional)">
+            <Field label="Affected Villa Unit / Area (Optional)">
               <Select value={unitId} onChange={(event) => setUnitId(event.target.value)}>
-                <option value="">Property-wide</option>
+                <option value="">Property-wide / Common Area</option>
                 {units.map((unit) => <option key={unit.id} value={unit.id}>{unit.name}</option>)}
               </Select>
             </Field>

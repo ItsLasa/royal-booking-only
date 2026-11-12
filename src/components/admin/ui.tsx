@@ -2,7 +2,15 @@
 
 import { cn } from "@/lib/cn";
 import { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode, SelectHTMLAttributes, TextareaHTMLAttributes } from "react";
-import { statusColor } from "@/lib/admin/format";
+import {
+  statusColor,
+  BOOKING_STATUS_LABELS,
+  PAYMENT_STATUS_LABELS,
+  ROOM_STATUS_LABELS,
+  HOUSEKEEPING_LABELS,
+  MAINTENANCE_STATUS_LABELS,
+  humanize,
+} from "@/lib/admin/format";
 
 /* ---------- Button ---------- */
 
@@ -28,7 +36,7 @@ export function Button({
   return (
     <button
       className={cn(
-        "inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-50 active:scale-[0.98]",
+        "inline-flex items-center justify-center gap-2 rounded-lg font-normal transition-all duration-150 disabled:cursor-not-allowed disabled:opacity-50 active:scale-[0.98]",
         variants[variant],
         sizes[size],
         className,
@@ -62,7 +70,7 @@ export function CardHeader({ title, subtitle, action }: { title: ReactNode; subt
   return (
     <div className="flex items-start justify-between gap-4 border-b border-outline-variant/50 px-5 py-4 dark:border-white/10">
       <div>
-        <h3 className="font-semibold text-on-surface dark:text-white">{title}</h3>
+        <h3 className="font-normal text-on-surface dark:text-white">{title}</h3>
         {subtitle && <p className="mt-0.5 text-sm text-on-surface-variant dark:text-neutral-400">{subtitle}</p>}
       </div>
       {action}
@@ -77,16 +85,24 @@ export function CardBody({ className, children }: { className?: string; children
 /* ---------- Badge / StatusBadge ---------- */
 
 export function StatusBadge({ status, label }: { status: string; label?: string }) {
-  const text = label ?? status.replace(/_/g, " ");
+  const text =
+    label ??
+    BOOKING_STATUS_LABELS[status] ??
+    PAYMENT_STATUS_LABELS[status] ??
+    ROOM_STATUS_LABELS[status] ??
+    HOUSEKEEPING_LABELS[status] ??
+    MAINTENANCE_STATUS_LABELS[status] ??
+    (status === "ACTIVE" ? "Active" : status === "INACTIVE" ? "Inactive" : humanize(status));
+
   return (
-    <span className={cn("inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide", statusColor(status))}>
+    <span className={cn("inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-normal tracking-wide", statusColor(status))}>
       {text}
     </span>
   );
 }
 
 export function Badge({ children, className }: { children: ReactNode; className?: string }) {
-  return <span className={cn("inline-flex items-center rounded-full bg-surface-container px-2.5 py-1 text-[11px] font-medium text-on-surface-variant dark:bg-white/10 dark:text-neutral-300", className)}>{children}</span>;
+  return <span className={cn("inline-flex items-center rounded-full bg-surface-container px-2.5 py-1 text-[11px] font-normal text-on-surface-variant dark:bg-white/10 dark:text-neutral-300", className)}>{children}</span>;
 }
 
 /* ---------- Form controls ---------- */
@@ -94,7 +110,7 @@ export function Badge({ children, className }: { children: ReactNode; className?
 export function Field({ label, error, hint, className, children }: { label: string; error?: string; hint?: string; className?: string; children: ReactNode }) {
   return (
     <label className={cn("block", className)}>
-      <span className="mb-1.5 block text-sm font-medium text-on-surface dark:text-neutral-200">{label}</span>
+      <span className="mb-1.5 block text-sm font-normal text-on-surface dark:text-neutral-200">{label}</span>
       {children}
       {hint && !error && <span className="mt-1 block text-xs text-on-surface-variant dark:text-neutral-500">{hint}</span>}
       {error && <span className="mt-1 block text-xs text-error">{error}</span>}
@@ -140,7 +156,7 @@ export function EmptyState({ icon, title, description, action }: { icon?: ReactN
   return (
     <div className="flex flex-col items-center justify-center px-6 py-16 text-center">
       {icon && <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-surface-container text-2xl dark:bg-white/10">{icon}</div>}
-      <h3 className="text-lg font-semibold text-on-surface dark:text-white">{title}</h3>
+      <h3 className="text-lg font-normal text-on-surface dark:text-white">{title}</h3>
       {description && <p className="mt-1 max-w-sm text-sm text-on-surface-variant dark:text-neutral-400">{description}</p>}
       {action && <div className="mt-5">{action}</div>}
     </div>
@@ -162,7 +178,7 @@ export function PageHeader({ title, description, actions, breadcrumbs }: { title
                   {crumb.label}
                 </a>
               ) : (
-                <span className="font-medium text-on-surface dark:text-white">{crumb.label}</span>
+                <span className="font-normal text-on-surface dark:text-white">{crumb.label}</span>
               )}
             </span>
           ))}
@@ -170,7 +186,7 @@ export function PageHeader({ title, description, actions, breadcrumbs }: { title
       )}
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-on-surface dark:text-white">{title}</h1>
+          <h1 className="text-2xl font-normal tracking-tight text-on-surface dark:text-white">{title}</h1>
           {description && <p className="mt-1 text-sm text-on-surface-variant dark:text-neutral-400">{description}</p>}
         </div>
         {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
@@ -190,8 +206,8 @@ export function StatCard({ label, value, sub, tone = "default" }: { label: strin
   };
   return (
     <Card className="p-5">
-      <p className="text-xs font-semibold uppercase tracking-wider text-on-surface-variant dark:text-neutral-400">{label}</p>
-      <p className={cn("mt-2 text-2xl font-bold", tones[tone])}>{value}</p>
+      <p className="text-xs font-normal uppercase tracking-wider text-on-surface-variant dark:text-neutral-400">{label}</p>
+      <p className={cn("mt-2 text-2xl font-normal", tones[tone])}>{value}</p>
       {sub && <p className="mt-1 text-xs text-on-surface-variant dark:text-neutral-500">{sub}</p>}
     </Card>
   );
@@ -209,7 +225,7 @@ export function Tabs({ tabs, active, onChange }: { tabs: { id: string; label: Re
           aria-selected={active === tab.id}
           onClick={() => onChange(tab.id)}
           className={cn(
-            "rounded-md px-4 py-2 text-sm font-medium transition-all",
+            "rounded-md px-4 py-2 text-sm font-normal transition-all",
             active === tab.id ? "bg-white text-on-surface shadow-sm dark:bg-white/15 dark:text-white" : "text-on-surface-variant hover:text-on-surface dark:text-neutral-400 dark:hover:text-white",
           )}
         >

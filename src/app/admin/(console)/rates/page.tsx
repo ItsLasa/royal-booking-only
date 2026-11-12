@@ -107,13 +107,13 @@ export default function RatesPage() {
   return (
     <div>
       <PageHeader
-        title="Rate manager"
-        description="Seasonal rates, date overrides and base prices"
+        title="Rate & Pricing Manager"
+        description="Manage seasonal pricing, weekend adjustments, date overrides, and base package rates"
         breadcrumbs={[{ label: "Rates" }]}
         actions={
           <>
-            <Button variant="outline" onClick={() => setBulkModal(true)}>Bulk update</Button>
-            <Button onClick={() => setRateModal(true)}>Add seasonal rate</Button>
+            <Button variant="outline" onClick={() => setBulkModal(true)}>Bulk Rate Adjustment</Button>
+            <Button onClick={() => setRateModal(true)}>+ Add Seasonal Rate</Button>
           </>
         }
       />
@@ -121,7 +121,7 @@ export default function RatesPage() {
       <div className="grid gap-6 lg:grid-cols-[280px_1fr]">
         {/* Package list */}
         <Card className="h-fit">
-          <CardHeader title="Packages" />
+          <CardHeader title="Stay Packages" subtitle="Select a package to view rates" />
           <div className="divide-y divide-outline-variant/40 dark:divide-white/5">
             {packages.map((pkg) => (
               <button
@@ -130,10 +130,10 @@ export default function RatesPage() {
                 className={cn("flex w-full items-center justify-between gap-2 px-5 py-3 text-left transition-colors", activePkg?.id === pkg.id ? "bg-[#061b0e]/5 dark:bg-white/10" : "hover:bg-surface-container/50 dark:hover:bg-white/5")}
               >
                 <div>
-                  <p className="text-sm font-medium">{pkg.name}</p>
+                  <p className="text-sm font-normal">{pkg.name}</p>
                   <p className="text-xs text-on-surface-variant dark:text-neutral-400">{lkr(pkg.basePrice)}/night</p>
                 </div>
-                <StatusBadge status={pkg.active ? "CONFIRMED" : "CANCELLED"} label={pkg.active ? "Active" : "Inactive"} />
+                <StatusBadge status={pkg.active ? "ACTIVE" : "INACTIVE"} />
               </button>
             ))}
           </div>
@@ -142,42 +142,42 @@ export default function RatesPage() {
         {/* Seasonal rates for selected package */}
         <Card>
           <CardHeader
-            title={`${activePkg?.name ?? "Package"} — seasonal rates`}
-            subtitle={activePkg ? `Base rate ${lkr(activePkg.basePrice)}/night · ${activePkg.seasonalRates?.length ?? 0} seasonal rates · ${activePkg.dateOverrides?.length ?? 0} overrides` : "Select a package"}
+            title={`${activePkg?.name ?? "Package"} — Seasonal Rates & Overrides`}
+            subtitle={activePkg ? `Base rate ${lkr(activePkg.basePrice)}/night · ${activePkg.seasonalRates?.length ?? 0} seasonal rates · ${activePkg.dateOverrides?.length ?? 0} date overrides` : "Select a package to configure rates"}
           />
           {activePkg?.seasonalRates?.length ? (
             <div className="divide-y divide-outline-variant/40 dark:divide-white/5">
               {activePkg.seasonalRates.map((rate) => (
                 <div key={rate.id} className="flex items-center justify-between gap-4 px-5 py-3.5">
                   <div>
-                    <p className="text-sm font-medium">{rate.name}</p>
+                    <p className="text-sm font-normal">{rate.name}</p>
                     <p className="text-xs text-on-surface-variant dark:text-neutral-400">
                       {formatDate(rate.startDate)} → {formatDate(rate.endDate)} · {lkr(rate.nightlyPrice)}/night
                       {rate.weekendPrice ? ` · weekend ${lkr(rate.weekendPrice)}` : ""}
-                      {rate.minimumNights ? ` · min ${rate.minimumNights}n` : ""}
+                      {rate.minimumNights ? ` · min ${rate.minimumNights} nights` : ""}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
-                    <StatusBadge status={rate.active ? "CONFIRMED" : "CANCELLED"} label={rate.active ? `P${rate.priority}` : "Off"} />
+                    <StatusBadge status={rate.active ? "ACTIVE" : "INACTIVE"} label={rate.active ? `Priority ${rate.priority}` : "Disabled"} />
                     <button onClick={() => setDeleteRate(rate)} className="rounded-md px-2 py-1 text-xs font-medium text-error hover:bg-error/5 dark:hover:bg-rose-500/10">Delete</button>
                   </div>
                 </div>
               ))}
             </div>
           ) : (
-            <EmptyState title="No seasonal rates" description="Add seasonal pricing to this package." />
+            <EmptyState title="No seasonal rates configured" description="Add seasonal pricing or holiday surcharges to this package." />
           )}
 
           {activePkg?.dateOverrides?.length ? (
             <>
-              <CardHeader title="Date overrides" />
+              <CardHeader title="Specific Date Overrides" subtitle="Special pricing or blackouts for single dates" />
               <div className="divide-y divide-outline-variant/40 dark:divide-white/5">
                 {activePkg.dateOverrides.slice(0, 20).map((override) => (
                   <div key={override.id} className="flex items-center justify-between gap-4 px-5 py-3">
                     <p className="text-sm">
-                      <span className="font-medium">{formatDate(override.date)}</span>
-                      {override.price && <span className="ml-2 text-on-surface-variant dark:text-neutral-400">{lkr(override.price)}</span>}
-                      {override.closed && <span className="ml-2 text-xs font-semibold text-error">CLOSED</span>}
+                      <span className="font-normal">{formatDate(override.date)}</span>
+                      {override.price && <span className="ml-2 font-medium text-primary dark:text-emerald-400">{lkr(override.price)}</span>}
+                      {override.closed && <span className="ml-2 rounded bg-rose-100 px-1.5 py-0.5 text-xs font-normal text-rose-800 dark:bg-rose-500/20 dark:text-rose-300">CLOSED TO ARRIVAL</span>}
                     </p>
                     <p className="text-xs text-on-surface-variant dark:text-neutral-500">{override.note ?? ""}</p>
                   </div>
@@ -191,39 +191,39 @@ export default function RatesPage() {
       <Modal
         open={rateModal}
         onClose={() => setRateModal(false)}
-        title="Add seasonal rate"
+        title="Add Seasonal Rate"
         footer={
           <>
             <Button variant="outline" onClick={() => setRateModal(false)}>Cancel</Button>
-            <Button onClick={createRate} loading={acting}>Create rate</Button>
+            <Button onClick={createRate} loading={acting}>Save Seasonal Rate</Button>
           </>
         }
       >
         <form onSubmit={createRate} className="space-y-4">
-          <Field label="Rate name">
-            <Input value={rateName} onChange={(event) => setRateName(event.target.value)} placeholder="e.g. August High Season" required />
+          <Field label="Seasonal Rate Name">
+            <Input value={rateName} onChange={(event) => setRateName(event.target.value)} placeholder="e.g. August Peak Season / Holiday Surcharge" required />
           </Field>
           <div className="grid grid-cols-2 gap-4">
-            <Field label="Start date">
+            <Field label="Effective Start Date">
               <Input type="date" value={rateStart} onChange={(event) => setRateStart(event.target.value)} required />
             </Field>
-            <Field label="End date">
+            <Field label="Effective End Date">
               <Input type="date" value={rateEnd} onChange={(event) => setRateEnd(event.target.value)} required />
             </Field>
           </div>
           <div className="grid grid-cols-2 gap-4">
-            <Field label="Nightly price (LKR)">
+            <Field label="Nightly Rate (LKR)">
               <Input type="number" min={0} value={ratePrice} onChange={(event) => setRatePrice(event.target.value)} required />
             </Field>
-            <Field label="Weekend price (LKR, optional)">
-              <Input type="number" min={0} value={rateWeekend} onChange={(event) => setRateWeekend(event.target.value)} />
+            <Field label="Weekend Rate (LKR, Optional)">
+              <Input type="number" min={0} value={rateWeekend} onChange={(event) => setRateWeekend(event.target.value)} placeholder="Leave blank if same" />
             </Field>
           </div>
           <div className="grid grid-cols-2 gap-4">
-            <Field label="Minimum nights (optional)">
-              <Input type="number" min={1} value={rateMinNights} onChange={(event) => setRateMinNights(event.target.value)} />
+            <Field label="Minimum Stay (Nights, Optional)">
+              <Input type="number" min={1} value={rateMinNights} onChange={(event) => setRateMinNights(event.target.value)} placeholder="e.g. 2" />
             </Field>
-            <Field label="Priority">
+            <Field label="Priority Level" hint="Higher numbers take precedence over other rates">
               <Input type="number" value={ratePriority} onChange={(event) => setRatePriority(event.target.value)} />
             </Field>
           </div>
@@ -233,20 +233,20 @@ export default function RatesPage() {
       <Modal
         open={bulkModal}
         onClose={() => setBulkModal(false)}
-        title="Bulk update base rates"
+        title="Bulk Update Package Rates"
         footer={
           <>
             <Button variant="outline" onClick={() => setBulkModal(false)}>Cancel</Button>
-            <Button onClick={applyBulk} loading={acting} disabled={!bulkAdjust || selected.length === 0}>Apply</Button>
+            <Button onClick={applyBulk} loading={acting} disabled={!bulkAdjust || selected.length === 0}>Apply Rate Adjustment</Button>
           </>
         }
       >
         <form onSubmit={applyBulk} className="space-y-4">
-          <Field label="Adjustment %" hint="Positive to increase, negative to decrease">
+          <Field label="Percentage Adjustment (%)" hint="Enter positive value to increase (e.g. 10), or negative to discount (e.g. -15)">
             <Input type="number" step="1" value={bulkAdjust} onChange={(event) => setBulkAdjust(event.target.value)} placeholder="e.g. 10" />
           </Field>
           <div>
-            <p className="mb-2 text-sm font-medium">Select packages</p>
+            <p className="mb-2 text-sm font-normal">Select Target Packages</p>
             <div className="max-h-52 space-y-1 overflow-y-auto">
               {packages.map((pkg) => (
                 <label key={pkg.id} className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm hover:bg-surface-container/50 dark:hover:bg-white/5">

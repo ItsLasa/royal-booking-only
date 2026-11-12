@@ -33,26 +33,26 @@ import {
 const NAV = [
   { section: "Operations", items: [
     { href: "/admin", label: "Dashboard", icon: HiOutlineHome, exact: true },
-    { href: "/admin/bookings", label: "Bookings", icon: HiOutlineCalendar },
-    { href: "/admin/calendar", label: "Calendar", icon: HiOutlineCalendar },
-    { href: "/admin/guests", label: "Guests", icon: HiOutlineUserGroup },
-    { href: "/admin/rooms", label: "Rooms", icon: HiOutlineHomeModern },
+    { href: "/admin/bookings", label: "Reservations", icon: HiOutlineCalendar },
+    { href: "/admin/calendar", label: "Availability Calendar", icon: HiOutlineCalendar },
+    { href: "/admin/guests", label: "Guest Directory", icon: HiOutlineUserGroup },
+    { href: "/admin/rooms", label: "Rooms & Units", icon: HiOutlineHomeModern },
   ]},
   { section: "Commerce", items: [
-    { href: "/admin/rates", label: "Rates", icon: HiOutlineTag },
-    { href: "/admin/packages", label: "Packages", icon: HiOutlineSparkles },
-    { href: "/admin/add-ons", label: "Available Extras", icon: HiOutlineSquaresPlus },
-    { href: "/admin/payments", label: "Payments", icon: HiOutlineCreditCard },
+    { href: "/admin/rates", label: "Rates & Pricing", icon: HiOutlineTag },
+    { href: "/admin/packages", label: "Stay Packages", icon: HiOutlineSparkles },
+    { href: "/admin/add-ons", label: "Extras & Add-ons", icon: HiOutlineSquaresPlus },
+    { href: "/admin/payments", label: "Payments & Billing", icon: HiOutlineCreditCard },
   ]},
   { section: "Property", items: [
-    { href: "/admin/housekeeping", label: "Housekeeping", icon: HiOutlineSparkles },
-    { href: "/admin/maintenance", label: "Maintenance", icon: HiOutlineWrenchScrewdriver },
-    { href: "/admin/reports", label: "Reports", icon: HiOutlineChartBar },
+    { href: "/admin/housekeeping", label: "Housekeeping Board", icon: HiOutlineSparkles },
+    { href: "/admin/maintenance", label: "Maintenance Issues", icon: HiOutlineWrenchScrewdriver },
+    { href: "/admin/reports", label: "Reports & Analytics", icon: HiOutlineChartBar },
   ]},
   { section: "Administration", items: [
-    { href: "/admin/staff", label: "Staff", icon: HiOutlineUsers },
-    { href: "/admin/settings", label: "Settings", icon: HiOutlineCog6Tooth },
-    { href: "/admin/audit", label: "Audit Logs", icon: HiOutlineClipboardDocumentList },
+    { href: "/admin/staff", label: "Staff Accounts", icon: HiOutlineUsers },
+    { href: "/admin/settings", label: "Resort Settings", icon: HiOutlineCog6Tooth },
+    { href: "/admin/audit", label: "Activity & Audit Trail", icon: HiOutlineClipboardDocumentList },
   ]},
 ];
 
@@ -147,7 +147,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
             <div className="relative hidden max-w-sm flex-1 md:block">
               <HiOutlineMagnifyingGlass className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-on-surface-variant/60 dark:text-neutral-500" />
               <input
-                placeholder="Search bookings, guests…"
+                placeholder="Search reservations, guests, references…"
                 onKeyDown={(event) => {
                   if (event.key === "Enter" && event.currentTarget.value.trim()) router.push(`/admin/bookings?search=${encodeURIComponent(event.currentTarget.value.trim())}`);
                 }}
@@ -166,7 +166,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
                 </button>
                 {notifOpen && (
                   <div className="absolute right-0 top-12 w-80 rounded-xl border border-outline-variant/50 bg-white p-2 shadow-xl dark:border-white/10 dark:bg-[#12171c]">
-                    <p className="px-3 py-2 text-xs font-semibold uppercase tracking-wider text-on-surface-variant dark:text-neutral-400">Notifications</p>
+                    <p className="px-3 py-2 text-xs font-normal uppercase tracking-wider text-on-surface-variant dark:text-neutral-400">Notifications</p>
                     <p className="px-3 py-6 text-center text-sm text-on-surface-variant dark:text-neutral-400">No new notifications</p>
                   </div>
                 )}
@@ -178,25 +178,25 @@ export function AdminShell({ children }: { children: ReactNode }) {
                   className="ml-1 flex items-center gap-2.5 rounded-lg px-2 py-1.5 transition-colors hover:bg-surface-container dark:hover:bg-white/10"
                   aria-label="Account menu"
                 >
-                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#061b0e] text-xs font-bold text-white dark:bg-emerald-600">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#061b0e] text-xs font-normal text-white dark:bg-emerald-600">
                     {user?.name?.slice(0, 1).toUpperCase() ?? "?"}
                   </span>
                   <span className="hidden text-left md:block">
-                    <span className="block text-sm font-medium leading-tight">{user?.name ?? "Loading…"}</span>
+                    <span className="block text-sm font-normal leading-tight">{user?.name ?? "Loading…"}</span>
                     <span className="block text-[11px] leading-tight text-on-surface-variant dark:text-neutral-500">{user?.role ?? ""}</span>
                   </span>
                 </button>
                 {menuOpen && (
                   <div className="absolute right-0 top-12 w-56 rounded-xl border border-outline-variant/50 bg-white p-1.5 shadow-xl dark:border-white/10 dark:bg-[#12171c]">
                     <div className="border-b border-outline-variant/40 px-3 py-2.5 dark:border-white/10">
-                      <p className="text-sm font-medium">{user?.name}</p>
+                      <p className="text-sm font-normal">{user?.name}</p>
                       <p className="text-xs text-on-surface-variant dark:text-neutral-400">{user?.email}</p>
                     </div>
                     <Link href="/admin/settings" onClick={() => setMenuOpen(false)} className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-surface-container dark:hover:bg-white/10">
-                      <HiOutlineCog6Tooth className="h-4 w-4" /> Settings
+                      <HiOutlineCog6Tooth className="h-4 w-4" /> Resort Settings
                     </Link>
                     <button onClick={logout} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-error hover:bg-error/5 dark:hover:bg-rose-500/10">
-                      <HiOutlineArrowRightOnRectangle className="h-4 w-4" /> Log out
+                      <HiOutlineArrowRightOnRectangle className="h-4 w-4" /> Sign Out
                     </button>
                   </div>
                 )}
@@ -217,8 +217,8 @@ function Brand() {
   return (
     <div className="flex items-center gap-3 px-5 py-5">
       <div>
-        <p className="text-sm  leading-tight tracking-wide">Admin Console</p>
-        <p className="text-[12px] leading-tight text-emerald-300/70">Royal Mansion Resort</p>
+        <p className="text-sm font-normal leading-tight tracking-wide">Management Console</p>
+        <p className="text-[12px] leading-tight text-emerald-300/80">Royal Mansion Resort & Villa</p>
       </div>
     </div>
   );
@@ -231,7 +231,7 @@ function SidebarContent({ pathname, isActive, onNavigate }: { pathname: string; 
       <nav className="flex-1 space-y-5 overflow-y-auto px-3 pb-6" aria-label="Admin navigation">
         {NAV.map((group) => (
           <div key={group.section}>
-            <p className="px-3 pb-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-emerald-200/50 dark:text-neutral-500">{group.section}</p>
+            <p className="px-3 pb-1.5 text-[10px] font-normal uppercase tracking-[0.18em] text-emerald-200/50 dark:text-neutral-500">{group.section}</p>
             <div className="space-y-0.5">
               {group.items.map((item) => {
                 const active = isActive(item.href, item.exact);
@@ -241,7 +241,7 @@ function SidebarContent({ pathname, isActive, onNavigate }: { pathname: string; 
                     href={item.href}
                     onClick={onNavigate}
                     className={cn(
-                      "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all",
+                      "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-normal transition-all",
                       active ? "bg-emerald-500/15 text-emerald-200 ring-1 ring-inset ring-emerald-400/30" : "text-neutral-300/80 hover:bg-white/5 hover:text-white",
                     )}
                   >
@@ -255,7 +255,7 @@ function SidebarContent({ pathname, isActive, onNavigate }: { pathname: string; 
         ))}
       </nav>
       <div className="border-t border-white/10 px-5 py-4">
-        <p className="text-[11px] text-neutral-400">v1.0 · Production console</p>
+        <p className="text-[11px] text-neutral-400">Royal Mansion PMS · Hotel Console</p>
       </div>
     </>
   );

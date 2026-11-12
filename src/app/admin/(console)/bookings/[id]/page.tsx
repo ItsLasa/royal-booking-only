@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { ColumnDef } from "@tanstack/react-table";
 import { adminGet, adminPost } from "@/lib/admin/api";
 import type { AuditLogEntry, Booking, Payment } from "@/lib/admin/types";
-import { formatDate, formatDateTime, lkr, relativeTime } from "@/lib/admin/format";
+import { formatDate, formatDateTime, lkr, relativeTime, BOOKING_SOURCE_LABELS, humanize } from "@/lib/admin/format";
 import { DataTable } from "@/components/admin/DataTable";
 import { Button, Card, CardBody, CardHeader, EmptyState, PageHeader, Skeleton, StatusBadge, Tabs } from "@/components/admin/ui";
 import { ConfirmDialog } from "@/components/admin/Modal";
@@ -56,7 +56,7 @@ export default function BookingDetailPage() {
   const paymentColumns = useMemo<ColumnDef<Payment, unknown>[]>(
     () => [
       { header: "Provider", accessorKey: "provider", cell: (info) => <span className="capitalize">{String(info.getValue()).replace("_", " ").toLowerCase()}</span> },
-      { header: "Amount", accessorKey: "amount", cell: (info) => <span className="font-semibold">{lkr(String(info.getValue()))}</span> },
+      { header: "Amount", accessorKey: "amount", cell: (info) => <span className="font-normal">{lkr(String(info.getValue()))}</span> },
       { header: "Status", accessorKey: "status", cell: (info) => <StatusBadge status={String(info.getValue())} /> },
       { header: "Verified", accessorKey: "verified", cell: (info) => (info.getValue() ? "Yes" : "No") },
       { header: "Method", accessorKey: "paymentMethod", cell: (info) => String(info.getValue() ?? "—") },
@@ -90,9 +90,9 @@ export default function BookingDetailPage() {
   return (
     <div>
       <PageHeader
-        title={`Booking ${booking.reference}`}
+        title={`Reservation ${booking.reference}`}
         description={`${booking.guest?.firstName} ${booking.guest?.lastName} · ${booking.package?.name ?? "—"} · ${booking.nights} night${booking.nights === 1 ? "" : "s"}`}
-        breadcrumbs={[{ label: "Bookings", href: "/admin/bookings" }, { label: booking.reference }]}
+        breadcrumbs={[{ label: "Reservations", href: "/admin/bookings" }, { label: booking.reference }]}
         actions={
           <>
             <StatusBadge status={booking.bookingStatus} />
@@ -104,29 +104,29 @@ export default function BookingDetailPage() {
       {/* Action bar */}
       <div className="mb-6 flex flex-wrap gap-2 rounded-xl border border-outline-variant/60 bg-white p-3 dark:border-white/10 dark:bg-[#12171c]">
         {booking.bookingStatus === "CONFIRMED" && !checkedIn && (
-          <Button onClick={() => runAction("check-in")}>Check in</Button>
+          <Button onClick={() => runAction("check-in")}>Check In Guest</Button>
         )}
         {checkedIn && !checkedOut && (
-          <Button onClick={() => setConfirm({ kind: "checkout" })} variant="secondary">Check out</Button>
+          <Button onClick={() => setConfirm({ kind: "checkout" })} variant="secondary">Check Out Guest</Button>
         )}
         {!["CONFIRMED", "COMPLETED"].includes(booking.bookingStatus) && isActive && (
-          <Button onClick={() => runAction("confirm")} variant="secondary">Confirm</Button>
+          <Button onClick={() => runAction("confirm")} variant="secondary">Confirm Reservation</Button>
         )}
         {booking.bookingStatus === "HOLD" && (
-          <Button onClick={() => runAction("no-show")} variant="outline">Mark no-show</Button>
+          <Button onClick={() => runAction("no-show")} variant="outline">Mark as No-Show</Button>
         )}
         {isActive && !checkedIn && (
-          <Button onClick={() => setConfirm({ kind: "cancel" })} variant="danger">Cancel booking</Button>
+          <Button onClick={() => setConfirm({ kind: "cancel" })} variant="danger">Cancel Reservation</Button>
         )}
       </div>
 
       <Tabs
         tabs={[
-          { id: "summary", label: "Summary" },
-          { id: "guest", label: "Guest" },
+          { id: "summary", label: "Reservation Summary" },
+          { id: "guest", label: "Guest Details" },
           { id: "payments", label: `Payments (${booking.payments?.length ?? 0})` },
-          { id: "activity", label: "Activity" },
-          { id: "notes", label: "Notes" },
+          { id: "activity", label: "Audit Trail" },
+          { id: "notes", label: "Internal Notes" },
         ]}
         active={tab}
         onChange={(id) => setTab(id as Tab)}
@@ -136,36 +136,36 @@ export default function BookingDetailPage() {
         {tab === "summary" && (
           <div className="grid gap-6 lg:grid-cols-3">
             <Card className="lg:col-span-2">
-              <CardHeader title="Stay details" />
+              <CardHeader title="Stay & Accommodation Details" />
               <CardBody>
                 <dl className="grid gap-x-6 gap-y-4 sm:grid-cols-2">
-                  <Detail label="Check-in" value={formatDate(booking.checkInDate)} />
-                  <Detail label="Check-out" value={formatDate(booking.checkOutDate)} />
-                  <Detail label="Nights" value={String(booking.nights)} />
-                  <Detail label="Guests" value={`${booking.adults} adults · ${booking.children} children · ${booking.infants} infants`} />
-                  <Detail label="Room" value={booking.unit?.name ?? "—"} />
-                  <Detail label="Source" value={booking.source.replace(/_/g, " ")} />
-                  <Detail label="Actual check-in" value={formatDateTime(booking.actualCheckInAt)} />
-                  <Detail label="Actual check-out" value={formatDateTime(booking.actualCheckOutAt)} />
-                  <Detail label="Payment option" value={booking.paymentOption} />
-                  <Detail label="Created" value={formatDateTime(booking.createdAt)} />
+                  <Detail label="Check-In Date" value={formatDate(booking.checkInDate)} />
+                  <Detail label="Check-Out Date" value={formatDate(booking.checkOutDate)} />
+                  <Detail label="Duration" value={`${booking.nights} night${booking.nights === 1 ? "" : "s"}`} />
+                  <Detail label="Guest Occupancy" value={`${booking.adults} adults · ${booking.children} children · ${booking.infants} infants`} />
+                  <Detail label="Assigned Villa / Room" value={booking.unit?.name ?? "Standard Allocation"} />
+                  <Detail label="Booking Channel" value={BOOKING_SOURCE_LABELS[booking.source] ?? humanize(booking.source)} />
+                  <Detail label="Actual Check-In" value={formatDateTime(booking.actualCheckInAt)} />
+                  <Detail label="Actual Check-Out" value={formatDateTime(booking.actualCheckOutAt)} />
+                  <Detail label="Payment Option" value={booking.paymentOption === "DEPOSIT" ? "Deposit Payment Only" : "Full Payment"} />
+                  <Detail label="Reservation Created" value={formatDateTime(booking.createdAt)} />
                 </dl>
               </CardBody>
             </Card>
 
             <Card>
-              <CardHeader title="Totals" />
+              <CardHeader title="Price Breakdown & Balance" />
               <CardBody className="space-y-2.5 text-sm">
-                <Row label="Subtotal" value={lkr(booking.subtotal)} />
-                <Row label="Add-ons" value={lkr(booking.addOnTotal)} />
-                <Row label="Discount" value={`-${lkr(booking.discountTotal)}`} />
-                <Row label="Service charge" value={lkr(booking.serviceChargeTotal)} />
-                <Row label="Tax" value={lkr(booking.taxTotal)} />
+                <Row label="Base Accommodation" value={lkr(booking.subtotal)} />
+                <Row label="Available Extras & Add-ons" value={lkr(booking.addOnTotal)} />
+                <Row label="Discount Applied" value={`-${lkr(booking.discountTotal)}`} />
+                <Row label="Service Charge" value={lkr(booking.serviceChargeTotal)} />
+                <Row label="Government Tax" value={lkr(booking.taxTotal)} />
                 <div className="border-t border-outline-variant/40 pt-2.5 dark:border-white/10">
-                  <Row label="Grand total" value={lkr(booking.grandTotal)} strong />
-                  <Row label="Deposit required" value={lkr(booking.depositRequired)} />
-                  <Row label="Amount paid" value={lkr(booking.amountPaid)} strong />
-                  <Row label="Balance due" value={lkr(booking.balanceDue)} strong />
+                  <Row label="Grand Total" value={lkr(booking.grandTotal)} strong />
+                  <Row label="Required Deposit" value={lkr(booking.depositRequired)} />
+                  <Row label="Amount Paid" value={lkr(booking.amountPaid)} strong />
+                  <Row label="Balance Due" value={lkr(booking.balanceDue)} strong />
                 </div>
               </CardBody>
             </Card>
@@ -176,13 +176,13 @@ export default function BookingDetailPage() {
           <Card>
             <CardBody>
               <dl className="grid gap-x-6 gap-y-4 sm:grid-cols-2">
-                <Detail label="Name" value={`${booking.guest?.firstName} ${booking.guest?.lastName}`} />
-                <Detail label="Email" value={booking.guest?.email ?? "—"} />
-                <Detail label="Phone" value={booking.guest?.phone ?? "—"} />
-                <Detail label="Country" value={booking.guest?.country ?? "—"} />
-                <Detail label="Address" value={booking.guest?.address ?? "—"} />
-                <Detail label="ID reference" value={booking.guest?.identityDocumentReference ?? "—"} />
-                <Detail label="Special requests" value={booking.specialRequests ?? "—"} />
+                <Detail label="Guest Full Name" value={`${booking.guest?.firstName} ${booking.guest?.lastName}`} />
+                <Detail label="Email Address" value={booking.guest?.email ?? "—"} />
+                <Detail label="Phone Number" value={booking.guest?.phone ?? "—"} />
+                <Detail label="Country / Region" value={booking.guest?.country ?? "—"} />
+                <Detail label="Residential Address" value={booking.guest?.address ?? "—"} />
+                <Detail label="ID / Passport Number" value={booking.guest?.identityDocumentReference ?? "—"} />
+                <Detail label="Special Requests / Dietary Notes" value={booking.specialRequests ?? "No special requests."} />
               </dl>
             </CardBody>
           </Card>
@@ -191,7 +191,7 @@ export default function BookingDetailPage() {
         {tab === "payments" && (
           <Card>
             <CardBody>
-              <DataTable columns={paymentColumns} data={booking.payments ?? []} emptyTitle="No payments recorded" emptyDescription="Record a payment from the Payments module." />
+              <DataTable columns={paymentColumns} data={booking.payments ?? []} emptyTitle="No payments recorded yet" emptyDescription="Use the Payments module to verify bank transfer slips or record manual cash payments." />
             </CardBody>
           </Card>
         )}
@@ -204,7 +204,7 @@ export default function BookingDetailPage() {
                   {booking.auditTrail.map((entry) => (
                     <li key={entry.id} className="relative">
                       <span className="absolute -left-[25px] top-1 h-2.5 w-2.5 rounded-full bg-[#061b0e] ring-4 ring-white dark:bg-emerald-500 dark:ring-[#12171c]" />
-                      <p className="text-sm font-medium">{entry.action.replace(/_/g, " ")}</p>
+                      <p className="text-sm font-medium">{humanize(entry.action)}</p>
                       <p className="text-xs text-on-surface-variant dark:text-neutral-400">
                         {entry.adminUser?.name ?? "System"} · {formatDateTime(entry.createdAt)} · {relativeTime(entry.createdAt)}
                       </p>
@@ -221,7 +221,7 @@ export default function BookingDetailPage() {
                   ))}
                 </ol>
               ) : (
-                <EmptyState title="No activity yet" description="Audit trail entries will appear here." />
+                <EmptyState title="No activity yet" description="All future actions and changes will appear in this audit log." />
               )}
             </CardBody>
           </Card>
@@ -230,16 +230,16 @@ export default function BookingDetailPage() {
         {tab === "notes" && (
           <div className="grid gap-6 lg:grid-cols-2">
             <Card>
-              <CardHeader title="Internal notes" />
+              <CardHeader title="Private Staff Notes" />
               <CardBody>
-                <p className="whitespace-pre-wrap text-sm text-on-surface-variant dark:text-neutral-300">{booking.internalNotes || "No internal notes."}</p>
+                <p className="whitespace-pre-wrap text-sm text-on-surface-variant dark:text-neutral-300">{booking.internalNotes || "No internal staff notes recorded."}</p>
               </CardBody>
             </Card>
             <Card>
-              <CardHeader title="Cancellation" />
+              <CardHeader title="Cancellation Record" />
               <CardBody>
                 <p className="text-sm text-on-surface-variant dark:text-neutral-300">
-                  {booking.cancellationReason ? `Reason: ${booking.cancellationReason}` : booking.bookingStatus === "CANCELLED" ? "Cancelled — no reason recorded." : "Not cancelled."}
+                  {booking.cancellationReason ? `Reason: ${booking.cancellationReason}` : booking.bookingStatus === "CANCELLED" ? "Cancelled — no specific reason entered." : "Active reservation (Not cancelled)."}
                 </p>
               </CardBody>
             </Card>
@@ -250,19 +250,19 @@ export default function BookingDetailPage() {
       <ConfirmDialog
         open={confirm?.kind === "cancel"}
         onClose={() => setConfirm(null)}
-        onConfirm={() => runAction("cancel", { reason: "Cancelled from owner console" })}
-        title="Cancel booking"
-        message="This will cancel the booking and release the dates. This action is audited."
-        confirmLabel="Cancel booking"
+        onConfirm={() => runAction("cancel", { reason: "Cancelled by management via admin console" })}
+        title="Cancel Reservation"
+        message="Are you sure you want to cancel this reservation? The dates will be released and this cancellation will be recorded in the audit trail."
+        confirmLabel="Yes, Cancel Reservation"
         loading={acting}
       />
       <ConfirmDialog
         open={confirm?.kind === "checkout"}
         onClose={() => setConfirm(null)}
         onConfirm={() => runAction("check-out")}
-        title="Check out guest"
-        message="Mark this guest as checked out and complete the booking."
-        confirmLabel="Check out"
+        title="Check Out Guest"
+        message="Mark this guest as checked out and complete this stay record."
+        confirmLabel="Confirm Check-Out"
         loading={acting}
         danger={false}
       />
@@ -273,7 +273,7 @@ export default function BookingDetailPage() {
 function Detail({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <dt className="text-xs font-semibold uppercase tracking-wider text-on-surface-variant dark:text-neutral-400">{label}</dt>
+      <dt className="text-xs font-normal uppercase tracking-wider text-on-surface-variant dark:text-neutral-400">{label}</dt>
       <dd className="mt-0.5 text-sm">{value}</dd>
     </div>
   );
@@ -282,8 +282,8 @@ function Detail({ label, value }: { label: string; value: string }) {
 function Row({ label, value, strong }: { label: string; value: string; strong?: boolean }) {
   return (
     <div className="flex items-center justify-between gap-4">
-      <span className={strong ? "font-semibold" : "text-on-surface-variant dark:text-neutral-400"}>{label}</span>
-      <span className={strong ? "font-semibold" : ""}>{value}</span>
+      <span className={strong ? "font-normal" : "text-on-surface-variant dark:text-neutral-400"}>{label}</span>
+      <span className={strong ? "font-normal" : ""}>{value}</span>
     </div>
   );
 }

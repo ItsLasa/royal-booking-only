@@ -64,27 +64,27 @@ export default function GuestsPage() {
   const columns = useMemo<ColumnDef<Guest, unknown>[]>(
     () => [
       {
-        header: "Guest",
+        header: "Guest Information",
         cell: (info) => {
           const guest = info.row.original;
           return (
             <div className="flex items-center gap-3">
-              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#061b0e]/5 text-xs font-bold dark:bg-white/10">
+              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#061b0e]/10 text-xs font-normal text-[#061b0e] dark:bg-white/10 dark:text-white">
                 {guest.firstName[0]}{guest.lastName[0]}
               </span>
               <div>
                 <p className="font-medium">{guest.firstName} {guest.lastName}</p>
-                <p className="text-xs text-on-surface-variant dark:text-neutral-400">{guest.country ?? ""}</p>
+                <p className="text-xs text-on-surface-variant dark:text-neutral-400">{guest.country ?? "Country not provided"}</p>
               </div>
             </div>
           );
         },
       },
-      { header: "Email", accessorKey: "email", cell: (info) => <span className="text-on-surface-variant dark:text-neutral-400">{String(info.getValue())}</span> },
-      { header: "Phone", accessorKey: "phone" },
-      { header: "Bookings", accessorKey: "_count.bookings", cell: (info) => <span className="font-semibold">{String(info.getValue() ?? 0)}</span> },
-      { header: "Marketing", accessorKey: "marketingConsent", cell: (info) => (info.getValue() ? "Consent" : "—") },
-      { header: "Since", accessorKey: "createdAt", cell: (info) => formatDate(String(info.getValue())) },
+      { header: "Email Address", accessorKey: "email", cell: (info) => <span className="text-on-surface-variant dark:text-neutral-400">{String(info.getValue())}</span> },
+      { header: "Telephone", accessorKey: "phone" },
+      { header: "Total Stays", accessorKey: "_count.bookings", cell: (info) => <span className="font-normal">{String(info.getValue() ?? 0)}</span> },
+      { header: "Marketing Status", accessorKey: "marketingConsent", cell: (info) => (info.getValue() ? <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">Subscribed</span> : <span className="text-xs text-neutral-400">Not Subscribed</span>) },
+      { header: "Customer Since", accessorKey: "createdAt", cell: (info) => formatDate(String(info.getValue())) },
     ],
     [],
   );
@@ -92,20 +92,27 @@ export default function GuestsPage() {
   return (
     <div>
       <PageHeader
-        title="Guests"
-        description="Guest directory with booking history"
+        title="Guest Directory"
+        description="Comprehensive guest profiles, contact records, stay history, and lifetime value"
         breadcrumbs={[{ label: "Guests" }]}
       />
 
       <div className="mb-4">
-        <Input placeholder="Search name, email or phone…" value={search} onChange={(event) => { setSearch(event.target.value); setPage(1); }} />
+        <Input placeholder="Search by guest name, email, or telephone number…" value={search} onChange={(event) => { setSearch(event.target.value); setPage(1); }} />
       </div>
 
       {error ? (
         <EmptyState title="Could not load guests" description={error} />
       ) : (
         <div className="overflow-hidden rounded-xl border border-outline-variant/60 bg-white dark:border-white/10 dark:bg-[#12171c]">
-          <DataTable columns={columns} data={data?.items ?? []} loading={loading} emptyTitle="No guests found" onRowClick={(row) => openGuest(row)} />
+          <DataTable
+            columns={columns}
+            data={data?.items ?? []}
+            loading={loading}
+            emptyTitle="No guests found"
+            emptyDescription="Try searching by a different name, email, or phone number."
+            onRowClick={(row) => openGuest(row)}
+          />
           {data && <Pagination page={data.page} pages={data.pages} total={data.total} onChange={setPage} />}
         </div>
       )}
@@ -113,29 +120,29 @@ export default function GuestsPage() {
       <Drawer
         open={Boolean(selected)}
         onClose={() => setSelected(null)}
-        title={detailLoading ? "Loading guest…" : selected ? `${selected.firstName} ${selected.lastName}` : "Guest"}
+        title={detailLoading ? "Loading guest profile…" : selected ? `${selected.firstName} ${selected.lastName}` : "Guest Profile"}
       >
-        {detailLoading && <EmptyState title="Loading…" />}
+        {detailLoading && <EmptyState title="Loading guest details…" />}
         {selected && (
           <div className="space-y-6">
             <div className="rounded-xl border border-outline-variant/50 p-4 dark:border-white/10">
               <dl className="grid gap-3 text-sm">
-                <dt className="text-xs font-semibold uppercase tracking-wider text-on-surface-variant dark:text-neutral-400">Contact</dt>
-                <dd>{selected.email} · {selected.phone}</dd>
-                <dd className="text-on-surface-variant dark:text-neutral-400">{selected.address || selected.country || "No address"}</dd>
-                <dt className="mt-2 text-xs font-semibold uppercase tracking-wider text-on-surface-variant dark:text-neutral-400">Lifetime spend</dt>
-                <dd className="text-lg font-bold">{lkr(selected.totals.spent)}</dd>
+                <dt className="text-xs font-normal uppercase tracking-wider text-on-surface-variant dark:text-neutral-400">Contact Information</dt>
+                <dd className="font-medium">{selected.email} · {selected.phone}</dd>
+                <dd className="text-on-surface-variant dark:text-neutral-400">{selected.address || selected.country || "No physical address provided"}</dd>
+                <dt className="mt-2 text-xs font-normal uppercase tracking-wider text-on-surface-variant dark:text-neutral-400">Total Lifetime Spend</dt>
+                <dd className="text-xl font-normal text-primary dark:text-emerald-400">{lkr(selected.totals.spent)}</dd>
               </dl>
             </div>
 
             <div>
-              <h3 className="mb-2 text-sm font-semibold">Booking history</h3>
-              {selected.bookings.length === 0 && <p className="text-sm text-on-surface-variant dark:text-neutral-400">No bookings yet.</p>}
+              <h3 className="mb-2 text-sm font-normal">Reservation History</h3>
+              {selected.bookings.length === 0 && <p className="text-sm text-on-surface-variant dark:text-neutral-400">No reservations recorded yet.</p>}
               <div className="space-y-2">
                 {selected.bookings.map((booking) => (
                   <a key={booking.id} href={`/admin/bookings/${booking.id}`} className="block rounded-lg border border-outline-variant/50 p-3 transition-colors hover:bg-surface-container/50 dark:border-white/10 dark:hover:bg-white/5">
                     <div className="flex items-center justify-between gap-2">
-                      <p className="text-sm font-medium">{booking.reference}</p>
+                      <p className="text-sm font-normal text-primary dark:text-emerald-400">{booking.reference}</p>
                       <StatusBadge status={booking.bookingStatus} />
                     </div>
                     <p className="mt-1 text-xs text-on-surface-variant dark:text-neutral-400">
@@ -148,11 +155,11 @@ export default function GuestsPage() {
             </div>
 
             <div>
-              <h3 className="mb-2 text-sm font-semibold">Internal notes</h3>
-              <Field label="Notes (visible to staff only)">
-                <Textarea value={notes} onChange={(event) => setNotes(event.target.value)} placeholder="Preferences, documents, review notes…" />
+              <h3 className="mb-2 text-sm font-normal">Private Staff Notes</h3>
+              <Field label="Staff Notes (Visible internally only)">
+                <Textarea value={notes} onChange={(event) => setNotes(event.target.value)} placeholder="Guest preferences, VIP requests, special room accommodations…" />
               </Field>
-              <Button size="sm" className="mt-2" onClick={saveNotes}>Save notes</Button>
+              <Button size="sm" className="mt-2" onClick={saveNotes}>Save Notes</Button>
             </div>
           </div>
         )}

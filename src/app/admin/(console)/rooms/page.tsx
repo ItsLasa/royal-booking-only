@@ -56,8 +56,8 @@ export default function RoomsPage() {
   return (
     <div>
       <PageHeader
-        title="Rooms & units"
-        description={`Live status for ${data.rooms.length} room${data.rooms.length === 1 ? "" : "s"} · ${data.today}`}
+        title="Rooms & Villa Units"
+        description={`Real-time availability, physical setup, and housekeeping status for all ${data.rooms.length} units · ${data.today}`}
         breadcrumbs={[{ label: "Rooms" }]}
       />
 
@@ -76,7 +76,7 @@ export default function RoomsPage() {
             <CardBody>
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <h3 className="font-semibold text-on-surface dark:text-white">{unit.name}</h3>
+                  <h3 className="font-normal text-on-surface dark:text-white">{unit.name}</h3>
                   <p className="mt-0.5 text-xs text-on-surface-variant dark:text-neutral-400">
                     {unit.bedrooms} bed · {unit.bathrooms} bath · max {unit.maximumOccupancy} guests
                   </p>
@@ -106,10 +106,10 @@ export default function RoomsPage() {
               )}
 
               <div className="mt-4 flex flex-wrap gap-2">
-                <Button size="sm" variant="outline" onClick={() => setHousekeeping(unit.id, "DIRTY")}>Dirty</Button>
-                <Button size="sm" variant="outline" onClick={() => setHousekeeping(unit.id, "CLEANING")}>Cleaning</Button>
-                <Button size="sm" variant="outline" onClick={() => setHousekeeping(unit.id, "READY")}>Ready</Button>
-                <Button size="sm" variant="outline" onClick={() => setHousekeeping(unit.id, "INSPECTED")}>Inspected</Button>
+                <Button size="sm" variant="outline" onClick={() => setHousekeeping(unit.id, "DIRTY")}>Mark Dirty</Button>
+                <Button size="sm" variant="outline" onClick={() => setHousekeeping(unit.id, "CLEANING")}>Start Cleaning</Button>
+                <Button size="sm" variant="outline" onClick={() => setHousekeeping(unit.id, "READY")}>Mark Ready</Button>
+                <Button size="sm" variant="outline" onClick={() => setHousekeeping(unit.id, "INSPECTED")}>Mark Inspected</Button>
               </div>
             </CardBody>
           </Card>

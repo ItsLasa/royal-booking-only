@@ -51,8 +51,8 @@ export default function HousekeepingPage() {
   return (
     <div>
       <PageHeader
-        title="Housekeeping"
-        description={`Task board for ${formatDate(board.date)}`}
+        title="Housekeeping & Inspection Board"
+        description={`Daily cleaning schedules, room turnaround, and inspection status for ${formatDate(board.date)}`}
         breadcrumbs={[{ label: "Housekeeping" }]}
         actions={
           <Input type="date" value={date} onChange={(event) => { setDate(event.target.value); load(event.target.value); }} className="w-44" />
@@ -68,7 +68,7 @@ export default function HousekeepingPage() {
         ))}
         <span className="inline-flex items-center gap-1.5 rounded-full border border-outline-variant/60 bg-white px-3 py-1.5 text-xs font-medium dark:border-white/10 dark:bg-white/5">
           <span className="h-2 w-2 rounded-full bg-sky-500" />
-          Occupied · {board.counts.OCCUPIED ?? 0}
+          Occupied by Guests · {board.counts.OCCUPIED ?? 0}
         </span>
       </div>
 
@@ -80,7 +80,7 @@ export default function HousekeepingPage() {
             <div key={row.unit.id} className={cn("rounded-xl border bg-white p-4 dark:bg-[#12171c]", isOccupied ? "border-sky-500/40" : "border-outline-variant/60 dark:border-white/10")}>
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <h3 className="font-semibold text-on-surface dark:text-white">{row.unit.name}</h3>
+                  <h3 className="font-normal text-on-surface dark:text-white">{row.unit.name}</h3>
                   <p className="text-xs text-on-surface-variant dark:text-neutral-400">{row.unit.bedrooms} bed · {row.unit.bathrooms} bath</p>
                 </div>
                 <StatusBadge status={row.status} label={isOccupied ? "Occupied" : HOUSEKEEPING_LABELS[row.status]} />
@@ -88,8 +88,8 @@ export default function HousekeepingPage() {
 
               {task?.assignedTo && (
                 <p className="mt-2 text-xs text-on-surface-variant dark:text-neutral-400">
-                  Assigned to <span className="font-medium text-on-surface dark:text-white">{task.assignedTo.name}</span>
-                  {task.notes && <span className="block truncate">{task.notes}</span>}
+                  Assigned Housekeeper: <span className="font-medium text-on-surface dark:text-white">{task.assignedTo.name}</span>
+                  {task.notes && <span className="block truncate text-neutral-500">{task.notes}</span>}
                 </p>
               )}
 
@@ -103,14 +103,14 @@ export default function HousekeepingPage() {
                       loading={acting === row.unit.id}
                       onClick={() => setStatus(row.unit.id, status)}
                     >
-                      {HOUSEKEEPING_LABELS[status]}
+                      {status === "DIRTY" ? "Mark Dirty" : status === "CLEANING" ? "Start Cleaning" : status === "READY" ? "Mark Ready" : status === "INSPECTED" ? "Mark Inspected" : HOUSEKEEPING_LABELS[status]}
                     </Button>
                   ))}
                 </div>
               )}
               {isOccupied && (
                 <p className="mt-3 rounded-lg bg-sky-500/10 px-2.5 py-1.5 text-xs font-medium text-sky-700 dark:text-sky-300">
-                  Guests in house — schedule cleaning after check-out.
+                  Guests currently in house — schedule full cleaning turnaround after departure.
                 </p>
               )}
             </div>

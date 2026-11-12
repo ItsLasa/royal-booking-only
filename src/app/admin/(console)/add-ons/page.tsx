@@ -163,9 +163,9 @@ export default function AddOnsPage() {
         </div>
       ) : addOns.length === 0 ? (
         <EmptyState
-          title="No available extras yet"
-          description="Add breakfast, airport pickup, BBQ dinner, or special services to offer guests during booking."
-          action={<Button onClick={openCreate}>Create first extra</Button>}
+          title="No available extras configured yet"
+          description="Add breakfast, airport pickup, BBQ dinner, or special tour packages to offer guests during checkout."
+          action={<Button onClick={openCreate}>Create First Extra</Button>}
         />
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -174,7 +174,7 @@ export default function AddOnsPage() {
               <CardBody className="space-y-3">
                 <div className="flex items-start justify-between gap-2">
                   <div>
-                    <h3 className="font-semibold text-on-surface dark:text-white text-base">{item.name}</h3>
+                    <h3 className="font-normal text-on-surface dark:text-white text-base">{item.name}</h3>
                     <p className="text-xs text-on-surface-variant dark:text-neutral-400 mt-0.5">
                       {PRICING_TYPE_LABELS[item.pricingType] || item.pricingType}
                     </p>
@@ -195,21 +195,21 @@ export default function AddOnsPage() {
                 )}
 
                 <div className="pt-2 border-t border-outline-variant/30 dark:border-white/10 flex items-center justify-between text-sm">
-                  <span className="font-semibold text-primary dark:text-emerald-400 text-lg">
+                  <span className="font-normal text-primary dark:text-emerald-400 text-lg">
                     {lkr(Number(item.price))}
                   </span>
                   <span className="text-xs text-on-surface-variant dark:text-neutral-400">
-                    Max: {item.maximumQuantity} per booking
+                    Max: {item.maximumQuantity} per reservation
                   </span>
                 </div>
               </CardBody>
 
               <div className="flex items-center gap-2 border-t border-outline-variant/40 bg-surface-container-low px-4 py-2.5 dark:border-white/10 dark:bg-white/[0.02]">
                 <Button size="sm" variant="outline" className="flex-1" onClick={() => openEdit(item)}>
-                  Edit
+                  Edit Details
                 </Button>
                 <Button size="sm" variant="ghost" className="text-red-600 hover:bg-red-50 dark:text-red-400" onClick={() => setDeleteTarget(item)}>
-                  Delete
+                  Remove
                 </Button>
               </div>
             </Card>
@@ -221,7 +221,7 @@ export default function AddOnsPage() {
       <Drawer
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
-        title={editing ? `Edit: ${editing.name}` : "New Available Extra"}
+        title={editing ? `Edit Extra: ${editing.name}` : "Create New Available Extra"}
         side="right"
         footer={
           <div className="flex justify-end gap-2">
@@ -235,7 +235,7 @@ export default function AddOnsPage() {
         }
       >
         <form onSubmit={handleSubmit} className="space-y-4">
-          <Field label="Extra / Add-on Name *">
+          <Field label="Service / Extra Name">
             <Input
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
@@ -244,20 +244,20 @@ export default function AddOnsPage() {
             />
           </Field>
 
-          <Field label="Pricing Type">
+          <Field label="Pricing Model">
             <Select
               value={form.pricingType}
               onChange={(e) => setForm({ ...form, pricingType: e.target.value as AddOnPricingType })}
             >
               <option value="PER_BOOKING">Per Booking (One-time flat fee)</option>
-              <option value="PER_NIGHT">Per Night (Charged per night stayed)</option>
-              <option value="PER_GUEST">Per Guest (Charged per adult/child)</option>
+              <option value="PER_NIGHT">Per Night (Multiplied by nights stayed)</option>
+              <option value="PER_GUEST">Per Guest (Multiplied by guest count)</option>
               <option value="PER_GUEST_PER_NIGHT">Per Guest / Per Night (e.g. Daily Breakfast)</option>
             </Select>
           </Field>
 
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Price (LKR) *">
+            <Field label="Price (LKR)">
               <Input
                 type="number"
                 min="0"
@@ -269,7 +269,7 @@ export default function AddOnsPage() {
               />
             </Field>
 
-            <Field label="Maximum Quantity">
+            <Field label="Maximum Selectable Quantity">
               <Input
                 type="number"
                 min="1"
@@ -282,12 +282,12 @@ export default function AddOnsPage() {
             </Field>
           </div>
 
-          <Field label="Description (Optional)">
+          <Field label="Description & Guest Information (Optional)">
             <Textarea
               rows={3}
               value={form.description}
               onChange={(e) => setForm({ ...form, description: e.target.value })}
-              placeholder="Short detail shown to the guest explaining this service or amenity."
+              placeholder="Describe what is included in this service for guests viewing the booking page..."
             />
           </Field>
 
@@ -300,7 +300,7 @@ export default function AddOnsPage() {
                 className="h-4 w-4 rounded border-outline-variant text-primary focus:ring-primary"
               />
               <span className="text-sm font-medium text-on-surface dark:text-neutral-200">
-                Active (Display on live booking page)
+                Active (Display on public booking engine)
               </span>
             </label>
           </div>
@@ -312,9 +312,9 @@ export default function AddOnsPage() {
         open={Boolean(deleteTarget)}
         onClose={() => setDeleteTarget(null)}
         onConfirm={handleDelete}
-        title="Delete Available Extra"
-        message={`Are you sure you want to remove "${deleteTarget?.name}"? If any bookings already have this extra selected, it will be deactivated instead of deleted.`}
-        confirmLabel="Delete"
+        title="Remove Available Extra"
+        message={`Are you sure you want to remove "${deleteTarget?.name}"? If any reservations have already selected this extra, it will be deactivated instead of deleted.`}
+        confirmLabel="Confirm Removal"
         danger
         loading={deleting}
       />

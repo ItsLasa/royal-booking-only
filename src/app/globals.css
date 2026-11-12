@@ -63,3 +63,12 @@ html.lenis body {
     will-change: transform;
   }
 }
+
+/* Admin Panel - No bold text anywhere per client specification */
+.admin-panel-root,
+.admin-panel-root *,
+[data-admin-root],
+[data-admin-root] * {
+  font-family: var(--font-open-sans), "Open Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+  font-weight: 400 !important;
+}

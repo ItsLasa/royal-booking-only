@@ -53,7 +53,7 @@ export function DataTable<TData>({ columns, data, loading, emptyTitle = "No reco
               {headerGroup.headers.map((header) => (
                 <th
                   key={header.id}
-                  className="whitespace-nowrap px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-on-surface-variant dark:text-neutral-400"
+                  className="whitespace-nowrap px-5 py-3 text-[11px] font-normal uppercase tracking-wider text-on-surface-variant dark:text-neutral-400"
                   colSpan={header.colSpan}
                 >
                   {header.isPlaceholder ? null : (

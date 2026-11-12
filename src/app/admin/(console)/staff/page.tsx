@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { ColumnDef } from "@tanstack/react-table";
 import { adminGet, adminPatch, adminPost } from "@/lib/admin/api";
 import type { AdminUser } from "@/lib/admin/types";
-import { formatDate, relativeTime } from "@/lib/admin/format";
+import { formatDate, relativeTime, STAFF_ROLE_LABELS } from "@/lib/admin/format";
 import { DataTable } from "@/components/admin/DataTable";
 import { Button, EmptyState, Field, Input, PageHeader, Select, StatusBadge } from "@/components/admin/ui";
 import { Modal } from "@/components/admin/Modal";
@@ -65,16 +65,16 @@ export default function StaffPage() {
   const columns = useMemo<ColumnDef<AdminUser, unknown>[]>(
     () => [
       {
-        header: "Staff",
+        header: "Staff Member",
         cell: (info) => {
           const member = info.row.original;
           return (
             <div className="flex items-center gap-3">
-              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#061b0e] text-xs font-bold text-white dark:bg-emerald-600">
+              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#061b0e] text-xs font-normal text-white dark:bg-emerald-600">
                 {member.name[0]}
               </span>
               <div>
-                <p className="font-medium">{member.name}</p>
+                <p className="font-normal">{member.name}</p>
                 <p className="text-xs text-on-surface-variant dark:text-neutral-400">{member.email}</p>
               </div>
             </div>
@@ -82,22 +82,24 @@ export default function StaffPage() {
         },
       },
       {
-        header: "Role",
+        header: "Assigned Role",
         accessorKey: "role",
         cell: (info) => (
           <Select
             value={String(info.getValue())}
             onChange={(event) => update(info.row.original.id, { role: event.target.value })}
-            className="w-36"
+            className="w-48 text-xs"
             disabled={acting}
           >
-            {ROLES.map((value) => <option key={value} value={value}>{value[0] + value.slice(1).toLowerCase()}</option>)}
+            {ROLES.map((value) => (
+              <option key={value} value={value}>{STAFF_ROLE_LABELS[value] ?? value}</option>
+            ))}
           </Select>
         ),
       },
-      { header: "Status", accessorKey: "active", cell: (info) => <StatusBadge status={info.getValue() ? "CONFIRMED" : "CANCELLED"} label={info.getValue() ? "Active" : "Inactive"} /> },
-      { header: "Last login", accessorKey: "lastLoginAt", cell: (info) => (info.getValue() ? relativeTime(String(info.getValue())) : "Never") },
-      { header: "Added", accessorKey: "createdAt", cell: (info) => formatDate(String(info.getValue())) },
+      { header: "Account Status", accessorKey: "active", cell: (info) => <StatusBadge status={info.getValue() ? "ACTIVE" : "INACTIVE"} /> },
+      { header: "Last Login", accessorKey: "lastLoginAt", cell: (info) => (info.getValue() ? relativeTime(String(info.getValue())) : "Never logged in") },
+      { header: "Account Created", accessorKey: "createdAt", cell: (info) => formatDate(String(info.getValue())) },
       {
         header: "Actions",
         cell: (info) => (
@@ -113,44 +115,46 @@ export default function StaffPage() {
   return (
     <div>
       <PageHeader
-        title="Staff"
-        description="Team members, roles and access"
+        title="Staff & User Accounts"
+        description="Manage team member accounts, administrative roles, and system permissions"
         breadcrumbs={[{ label: "Staff" }]}
-        actions={<Button onClick={() => setInviteOpen(true)}>Add staff</Button>}
+        actions={<Button onClick={() => setInviteOpen(true)}>+ Add Staff Member</Button>}
       />
 
       {error ? (
         <EmptyState title="Could not load staff" description={error} />
       ) : (
         <div className="overflow-hidden rounded-xl border border-outline-variant/60 bg-white dark:border-white/10 dark:bg-[#12171c]">
-          <DataTable columns={columns} data={staff} loading={loading} emptyTitle="No staff members" emptyDescription="Add your first team member." />
+          <DataTable columns={columns} data={staff} loading={loading} emptyTitle="No staff members registered" emptyDescription="Add your first team member account." />
         </div>
       )}
 
       <Modal
         open={inviteOpen}
         onClose={() => setInviteOpen(false)}
-        title="Add staff member"
+        title="Add New Staff Member"
         footer={
           <>
             <Button variant="outline" onClick={() => setInviteOpen(false)}>Cancel</Button>
-            <Button onClick={invite} loading={acting}>Add staff</Button>
+            <Button onClick={invite} loading={acting}>Create Staff Account</Button>
           </>
         }
       >
         <form onSubmit={invite} className="space-y-4">
-          <Field label="Full name">
-            <Input value={name} onChange={(event) => setName(event.target.value)} required />
+          <Field label="Full Name">
+            <Input value={name} onChange={(event) => setName(event.target.value)} placeholder="e.g. Kasun Fernando" required />
           </Field>
-          <Field label="Email">
-            <Input type="email" value={email} onChange={(event) => setEmail(event.target.value)} required />
+          <Field label="Staff Email Address">
+            <Input type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="kasun@royalmansionresorts.com" required />
           </Field>
-          <Field label="Temporary password" hint="Minimum 8 characters. They can be reset later.">
-            <Input type="text" value={password} onChange={(event) => setPassword(event.target.value)} minLength={8} required />
+          <Field label="Temporary Password" hint="Minimum 8 characters. The staff member can update it anytime.">
+            <Input type="text" value={password} onChange={(event) => setPassword(event.target.value)} minLength={8} placeholder="Enter a secure temporary password" required />
           </Field>
-          <Field label="Role">
+          <Field label="Assigned System Role">
             <Select value={role} onChange={(event) => setRole(event.target.value)}>
-              {ROLES.map((value) => <option key={value} value={value}>{value[0] + value.slice(1).toLowerCase()}</option>)}
+              {ROLES.map((value) => (
+                <option key={value} value={value}>{STAFF_ROLE_LABELS[value] ?? value}</option>
+              ))}
             </Select>
           </Field>
         </form>

@@ -41,7 +41,7 @@ export function Modal({ open, onClose, title, children, footer, size = "md" }: {
             transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
           >
             <div className="flex items-center justify-between border-b border-outline-variant/60 px-5 py-4 dark:border-white/10">
-              <h2 className="text-lg font-semibold text-on-surface dark:text-white">{title}</h2>
+              <h2 className="text-lg font-normal text-on-surface dark:text-white">{title}</h2>
               <button onClick={onClose} aria-label="Close dialog" className="flex h-8 w-8 items-center justify-center rounded-lg text-on-surface-variant transition-colors hover:bg-surface-container dark:text-neutral-400 dark:hover:bg-white/10">
                 ✕
               </button>
@@ -76,7 +76,7 @@ export function Drawer({ open, onClose, title, children, footer, side = "right" 
             transition={{ type: "spring", stiffness: 320, damping: 32 }}
           >
             <div className="flex items-center justify-between border-b border-outline-variant/60 px-5 py-4 dark:border-white/10">
-              <h2 className="text-lg font-semibold text-on-surface dark:text-white">{title}</h2>
+              <h2 className="text-lg font-normal text-on-surface dark:text-white">{title}</h2>
               <button onClick={onClose} aria-label="Close drawer" className="flex h-8 w-8 items-center justify-center rounded-lg text-on-surface-variant transition-colors hover:bg-surface-container dark:text-neutral-400 dark:hover:bg-white/10">
                 ✕
               </button>

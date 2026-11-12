@@ -95,33 +95,33 @@ export default function CalendarPage() {
   return (
     <div>
       <PageHeader
-        title="Reservation calendar"
-        description={`${formatDate(new Date())} · ${data.units.length} room${data.units.length === 1 ? "" : "s"}`}
+        title="Reservation & Availability Calendar"
+        description={`Live room availability, occupied dates, and maintenance blocks · ${data.units.length} unit${data.units.length === 1 ? "" : "s"}`}
         breadcrumbs={[{ label: "Calendar" }]}
-        actions={<Button onClick={() => setBlockModal(true)}>Block dates</Button>}
+        actions={<Button onClick={() => setBlockModal(true)}>+ Block Room Dates</Button>}
       />
 
       {/* Blocks & maintenance summary */}
       <div className="mb-5 grid gap-4 md:grid-cols-2">
         <Card>
-          <CardHeader title="Availability blocks" subtitle="Rooms taken out of sale" />
+          <CardHeader title="Room Availability Blocks" subtitle="Dates temporarily taken off sale" />
           <div className="divide-y divide-outline-variant/40 dark:divide-white/5">
-            {data.blocks.length === 0 && <p className="px-5 py-4 text-sm text-on-surface-variant dark:text-neutral-400">No blocks.</p>}
+            {data.blocks.length === 0 && <p className="px-5 py-4 text-sm text-on-surface-variant dark:text-neutral-400">No active date blocks currently set.</p>}
             {data.blocks.map((block) => (
               <div key={block.id} className="flex items-center justify-between gap-3 px-5 py-3">
                 <div>
-                  <p className="text-sm font-medium">{block.reason}</p>
+                  <p className="text-sm font-normal">{block.reason}</p>
                   <p className="text-xs text-on-surface-variant dark:text-neutral-400">{block.unit?.name} · {formatDate(block.startDate)} → {formatDate(block.endDate)}</p>
                 </div>
-                <button onClick={() => removeBlock(block.id)} className="rounded-md px-2 py-1 text-xs font-medium text-error hover:bg-error/5 dark:hover:bg-rose-500/10">Remove</button>
+                <button onClick={() => removeBlock(block.id)} className="rounded-md px-2 py-1 text-xs font-medium text-error hover:bg-error/5 dark:hover:bg-rose-500/10">Unblock</button>
               </div>
             ))}
           </div>
         </Card>
         <Card>
-          <CardHeader title="Open maintenance" subtitle="Issues affecting availability" />
+          <CardHeader title="Active Maintenance Issues" subtitle="Reported issues affecting availability" />
           <div className="divide-y divide-outline-variant/40 dark:divide-white/5">
-            {data.maintenance.length === 0 && <p className="px-5 py-4 text-sm text-on-surface-variant dark:text-neutral-400">No open issues.</p>}
+            {data.maintenance.length === 0 && <p className="px-5 py-4 text-sm text-on-surface-variant dark:text-neutral-400">No open maintenance issues affecting room sale.</p>}
             {data.maintenance.map((issue) => (
               <div key={issue.id} className="flex items-center justify-between gap-3 px-5 py-3">
                 <div>
@@ -137,11 +137,11 @@ export default function CalendarPage() {
 
       {/* Month grid */}
       <Card>
-        <CardHeader title={new Date().toLocaleDateString("en-GB", { month: "long", year: "numeric" })} subtitle="Bookings and blocks per day" />
+        <CardHeader title={new Date().toLocaleDateString("en-GB", { month: "long", year: "numeric" })} subtitle="Confirmed guest stays and blocked calendar dates" />
         <div className="overflow-x-auto p-4">
           <div className="grid min-w-[1100px] grid-cols-7 gap-2 text-xs">
             {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
-              <div key={day} className="pb-1 text-center text-[10px] font-semibold uppercase tracking-wider text-on-surface-variant dark:text-neutral-500">
+              <div key={day} className="pb-1 text-center text-[10px] font-normal uppercase tracking-wider text-on-surface-variant dark:text-neutral-500">
                 {day}
               </div>
             ))}
@@ -157,7 +157,7 @@ export default function CalendarPage() {
               const isToday = key === new Date().toISOString().slice(0, 10);
               return (
                 <div key={key} className={cn("min-h-[92px] rounded-lg border p-1.5", isToday ? "border-[#061b0e] bg-[#061b0e]/5 dark:border-emerald-500 dark:bg-emerald-500/10" : "border-outline-variant/50 dark:border-white/10")}>
-                  <p className={cn("mb-1 text-[11px] font-semibold", isToday ? "text-[#061b0e] dark:text-emerald-300" : "text-on-surface-variant dark:text-neutral-500")}>{date.getDate()}</p>
+                  <p className={cn("mb-1 text-[11px] font-normal", isToday ? "text-[#061b0e] dark:text-emerald-300" : "text-on-surface-variant dark:text-neutral-500")}>{date.getDate()}</p>
                   <div className="space-y-1">
                     {dayBookings.slice(0, 2).map((booking) => (
                       <a key={booking.id} href={`/admin/bookings/${booking.id}`} className={cn("block truncate rounded px-1.5 py-0.5 text-[10px] font-medium", STATUS_BG[booking.bookingStatus] ?? "bg-neutral-500/20 text-neutral-600")}>
@@ -180,16 +180,16 @@ export default function CalendarPage() {
       <Modal
         open={blockModal}
         onClose={() => setBlockModal(false)}
-        title="Block dates"
+        title="Block Room Dates"
         footer={
           <>
             <Button variant="outline" onClick={() => setBlockModal(false)}>Cancel</Button>
-            <Button onClick={createBlock} loading={saving}>Create block</Button>
+            <Button onClick={createBlock} loading={saving}>Confirm Date Block</Button>
           </>
         }
       >
         <form onSubmit={createBlock} className="space-y-4">
-          <Field label="Room">
+          <Field label="Select Room / Villa Unit">
             <Select value={unitId} onChange={(event) => setUnitId(event.target.value)}>
               {data.units.map((unit) => (
                 <option key={unit.id} value={unit.id}>{unit.name}</option>
@@ -197,18 +197,18 @@ export default function CalendarPage() {
             </Select>
           </Field>
           <div className="grid grid-cols-2 gap-4">
-            <Field label="Start date">
+            <Field label="Block Start Date">
               <Input type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} required />
             </Field>
-            <Field label="End date">
+            <Field label="Block End Date">
               <Input type="date" value={endDate} onChange={(event) => setEndDate(event.target.value)} required min={startDate} />
             </Field>
           </div>
-          <Field label="Reason">
-            <Input value={reason} onChange={(event) => setReason(event.target.value)} placeholder="e.g. Maintenance, owner use" required />
+          <Field label="Reason for Blocking">
+            <Input value={reason} onChange={(event) => setReason(event.target.value)} placeholder="e.g. Scheduled deep cleaning, private owner use, VIP hold" required />
           </Field>
-          <Field label="Notes">
-            <Textarea value={notes} onChange={(event) => setNotes(event.target.value)} />
+          <Field label="Additional Staff Notes (Optional)">
+            <Textarea value={notes} onChange={(event) => setNotes(event.target.value)} placeholder="Any additional notes for front desk or housekeeping staff..." />
           </Field>
         </form>
       </Modal>

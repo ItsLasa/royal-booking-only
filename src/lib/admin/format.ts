@@ -31,44 +31,44 @@ export function relativeTime(value: string | Date) {
 
 export const BOOKING_STATUS_LABELS: Record<string, string> = {
   HOLD: "Hold",
-  PENDING_PAYMENT: "Pending payment",
-  PAYMENT_PROCESSING: "Processing",
+  PENDING_PAYMENT: "Pending Payment",
+  PAYMENT_PROCESSING: "Processing Payment",
   CONFIRMED: "Confirmed",
   CANCELLED: "Cancelled",
   COMPLETED: "Completed",
-  NO_SHOW: "No show",
+  NO_SHOW: "No Show",
   EXPIRED: "Expired",
 };
 
 export const PAYMENT_STATUS_LABELS: Record<string, string> = {
   UNPAID: "Unpaid",
-  PARTIALLY_PAID: "Partially paid",
+  PARTIALLY_PAID: "Partially Paid",
   PAID: "Paid",
   FAILED: "Failed",
-  REFUND_PENDING: "Refund pending",
-  PARTIALLY_REFUNDED: "Partially refunded",
+  REFUND_PENDING: "Refund Pending",
+  PARTIALLY_REFUNDED: "Partially Refunded",
   REFUNDED: "Refunded",
 };
 
 export const HOUSEKEEPING_LABELS: Record<string, string> = {
-  DIRTY: "Dirty",
+  DIRTY: "Needs Cleaning",
   ASSIGNED: "Assigned",
-  CLEANING: "Cleaning",
-  READY: "Ready",
-  INSPECTED: "Inspected",
+  CLEANING: "Cleaning in Progress",
+  READY: "Clean & Ready",
+  INSPECTED: "Inspected & Verified",
 };
 
 export const MAINTENANCE_STATUS_LABELS: Record<string, string> = {
   REPORTED: "Reported",
   ASSIGNED: "Assigned",
-  IN_PROGRESS: "In progress",
-  COMPLETED: "Completed",
+  IN_PROGRESS: "In Progress",
+  COMPLETED: "Resolved",
 };
 
 export const MAINTENANCE_PRIORITY_LABELS: Record<string, string> = {
-  LOW: "Low",
-  MEDIUM: "Medium",
-  HIGH: "High",
+  LOW: "Low Priority",
+  MEDIUM: "Medium Priority",
+  HIGH: "High Priority",
   URGENT: "Urgent",
 };
 
@@ -81,8 +81,42 @@ export const ROOM_STATUS_LABELS: Record<string, string> = {
   READY: "Ready",
   INSPECTED: "Inspected",
   BLOCKED: "Blocked",
-  MAINTENANCE: "Maintenance",
+  MAINTENANCE: "Under Maintenance",
 };
+
+export const BOOKING_SOURCE_LABELS: Record<string, string> = {
+  ADMIN: "Direct Front Desk",
+  PHONE: "Phone Reservation",
+  WALK_IN: "Walk-in Guest",
+  BOOKING_COM: "Booking.com",
+  AIRBNB: "Airbnb",
+  AGODA: "Agoda",
+  OTHER: "Other Channel",
+};
+
+export const PAYMENT_PROVIDER_LABELS: Record<string, string> = {
+  PAYHERE: "PayHere Online",
+  BANK_TRANSFER: "Bank Transfer",
+  CASH: "Cash at Front Desk",
+};
+
+export const STAFF_ROLE_LABELS: Record<string, string> = {
+  OWNER: "Owner / Director",
+  MANAGER: "General Manager",
+  STAFF: "Operations Staff",
+  RECEPTION: "Front Desk / Reception",
+  HOUSEKEEPING: "Housekeeping Team",
+  MAINTENANCE: "Maintenance & Engineering",
+  ACCOUNTANT: "Financial Accountant",
+};
+
+export function humanize(text: string | null | undefined): string {
+  if (!text) return "";
+  return text
+    .split("_")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(" ");
+}
 
 export function statusColor(status: string) {
   const map: Record<string, string> = {
