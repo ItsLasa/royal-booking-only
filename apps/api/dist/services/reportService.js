@@ -106,8 +106,12 @@ async function getCancellationReport(prisma, query) {
     return { total, cancelled, cancellationRate: total > 0 ? Number(((cancelled / total) * 100).toFixed(2)) : 0 };
 }
 function csvEscape(value) {
-    const str = String(value ?? "");
-    if (/[",\n]/.test(str))
+    let str = String(value ?? "");
+    // Neutralize CSV Formula Injection (CWE-1236) in Excel, LibreOffice, Google Sheets
+    if (/^[=\+\-@\t\r]/.test(str)) {
+        str = `'${str}`;
+    }
+    if (/[",\n\r]/.test(str))
         return `"${str.replace(/"/g, '""')}"`;
     return str;
 }

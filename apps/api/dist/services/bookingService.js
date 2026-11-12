@@ -5,6 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.createBookingHold = createBookingHold;
 exports.publicBooking = publicBooking;
+const client_1 = require("@prisma/client");
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const date_fns_1 = require("date-fns");
 const env_1 = require("../config/env");
@@ -18,6 +19,8 @@ async function createBookingHold(prisma, input) {
     const quote = await (0, pricingService_1.calculateQuote)(prisma, input);
     const checkInDate = new Date(`${input.checkInDate}T00:00:00.000Z`);
     const checkOutDate = new Date(`${input.checkOutDate}T00:00:00.000Z`);
+    // Asynchronously compute hash before entering database transaction to prevent event-loop blocking
+    const manageTokenHash = await bcryptjs_1.default.hash(`${input.guest.email}:${Date.now()}`, 10);
     for (let attempt = 0; attempt < 3; attempt += 1) {
         try {
             return await prisma.$transaction(async (tx) => {
@@ -25,14 +28,54 @@ async function createBookingHold(prisma, input) {
                 const guest = await tx.guest.create({ data: input.guest });
                 const booking = await tx.booking.create({
                     data: {
-                        reference: (0, references_1.createBookingReference)("RMV", checkInDate), propertyId: quote.package.propertyId, unitId: quote.package.unitId, packageId: quote.package.id, guestId: guest.id,
-                        checkInDate, checkOutDate, nights: quote.nights, adults: input.adults, children: input.children, infants: input.infants,
-                        subtotal: quote.subtotal, addOnTotal: quote.addOnTotal, discountTotal: quote.discountTotal, taxTotal: quote.taxTotal, serviceChargeTotal: quote.serviceChargeTotal,
-                        grandTotal: quote.grandTotal, depositRequired: quote.depositRequired, balanceDue: quote.grandTotal, currency: quote.currency, paymentOption: input.paymentOption,
-                        bookingStatus: input.paymentOption === "FULL" || input.paymentOption === "DEPOSIT" ? "HOLD" : "PENDING_PAYMENT", paymentStatus: "UNPAID", source: "DIRECT_WEBSITE",
-                        specialRequests: input.specialRequests, expiresAt: (0, date_fns_1.addMinutes)(new Date(), env_1.env.BOOKING_HOLD_MINUTES), manageTokenHash: bcryptjs_1.default.hashSync(`${guest.email}:${Date.now()}`, 10),
-                        priceLines: { create: quote.lines.map((line) => ({ type: line.type, description: line.description, serviceDate: line.serviceDate ? new Date(`${line.serviceDate}T00:00:00.000Z`) : undefined, quantity: line.quantity, unitAmount: line.unitAmount, totalAmount: line.totalAmount, metadata: line.metadata })) },
-                        payments: { create: { provider: "PAYHERE", idempotencyKey: `${quote.package.id}-${Date.now()}-${attempt}`, amount: quote.depositRequired, currency: quote.currency, status: "UNPAID", providerOrderId: undefined } },
+                        reference: (0, references_1.createBookingReference)("RMV", checkInDate),
+                        propertyId: quote.package.propertyId,
+                        unitId: quote.package.unitId,
+                        packageId: quote.package.id,
+                        guestId: guest.id,
+                        checkInDate,
+                        checkOutDate,
+                        nights: quote.nights,
+                        adults: input.adults,
+                        children: input.children,
+                        infants: input.infants,
+                        subtotal: quote.subtotal,
+                        addOnTotal: quote.addOnTotal,
+                        discountTotal: quote.discountTotal,
+                        taxTotal: quote.taxTotal,
+                        serviceChargeTotal: quote.serviceChargeTotal,
+                        grandTotal: quote.grandTotal,
+                        depositRequired: quote.depositRequired,
+                        balanceDue: quote.grandTotal,
+                        currency: quote.currency,
+                        paymentOption: input.paymentOption,
+                        bookingStatus: input.paymentOption === "FULL" || input.paymentOption === "DEPOSIT" ? "HOLD" : "PENDING_PAYMENT",
+                        paymentStatus: "UNPAID",
+                        source: "DIRECT_WEBSITE",
+                        specialRequests: input.specialRequests,
+                        expiresAt: (0, date_fns_1.addMinutes)(new Date(), env_1.env.BOOKING_HOLD_MINUTES),
+                        manageTokenHash,
+                        priceLines: {
+                            create: quote.lines.map((line) => ({
+                                type: line.type,
+                                description: line.description,
+                                serviceDate: line.serviceDate ? new Date(`${line.serviceDate}T00:00:00.000Z`) : undefined,
+                                quantity: line.quantity,
+                                unitAmount: line.unitAmount,
+                                totalAmount: line.totalAmount,
+                                metadata: line.metadata,
+                            })),
+                        },
+                        payments: {
+                            create: {
+                                provider: "PAYHERE",
+                                idempotencyKey: `${quote.package.id}-${Date.now()}-${attempt}`,
+                                amount: quote.depositRequired,
+                                currency: quote.currency,
+                                status: "UNPAID",
+                                providerOrderId: undefined,
+                            },
+                        },
                     },
                     include: { guest: true, package: true, priceLines: true, payments: true },
                 });
@@ -40,8 +83,11 @@ async function createBookingHold(prisma, input) {
             }, { isolationLevel: "Serializable", maxWait: 5000, timeout: 10000 });
         }
         catch (error) {
-            if (attempt === 2)
+            // Only retry on transient database serialization / deadlock conflicts (P2034)
+            const isDeadlock = error instanceof client_1.Prisma.PrismaClientKnownRequestError && error.code === "P2034";
+            if (!isDeadlock || attempt === 2) {
                 throw error;
+            }
         }
     }
     throw new apiResponse_1.ApiError(409, "DATES_UNAVAILABLE", "The selected dates are no longer available.");

@@ -1,15 +1,23 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.requireCronSecret = requireCronSecret;
 exports.requireAdmin = requireAdmin;
 exports.requireRole = requireRole;
+const crypto_1 = __importDefault(require("crypto"));
 const env_1 = require("../config/env");
 const apiResponse_1 = require("../lib/apiResponse");
 const adminSession_1 = require("../lib/adminSession");
 const prisma_1 = require("../lib/prisma");
 function requireCronSecret(req, _res, next) {
-    if (req.header("x-cron-secret") !== env_1.env.CRON_SECRET)
+    const provided = req.header("x-cron-secret") || "";
+    const bufProvided = crypto_1.default.createHash("sha256").update(provided).digest();
+    const bufExpected = crypto_1.default.createHash("sha256").update(env_1.env.CRON_SECRET).digest();
+    if (!crypto_1.default.timingSafeEqual(bufProvided, bufExpected)) {
         return next(new apiResponse_1.ApiError(401, "UNAUTHORIZED", "Cron secret is invalid."));
+    }
     next();
 }
 async function requireAdmin(req, _res, next) {

@@ -7,6 +7,7 @@ exports.adminAuthRoutes = void 0;
 const express_1 = require("express");
 const zod_1 = require("zod");
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
+const express_rate_limit_1 = __importDefault(require("express-rate-limit"));
 const date_fns_1 = require("date-fns");
 const prisma_1 = require("../lib/prisma");
 const apiResponse_1 = require("../lib/apiResponse");
@@ -14,6 +15,19 @@ const validation_1 = require("../middleware/validation");
 const auth_1 = require("../middleware/auth");
 const adminSession_1 = require("../lib/adminSession");
 const env_1 = require("../config/env");
+const loginLimiter = (0, express_rate_limit_1.default)({
+    windowMs: 15 * 60 * 1000,
+    limit: 10,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: {
+        success: false,
+        error: {
+            code: "TOO_MANY_ATTEMPTS",
+            message: "Too many login attempts. Please try again after 15 minutes.",
+        },
+    },
+});
 const loginSchema = zod_1.z.object({
     email: zod_1.z.string().email(),
     password: zod_1.z.string().min(8),
@@ -23,13 +37,13 @@ function cookieOptions() {
         httpOnly: true,
         signed: true,
         secure: env_1.env.NODE_ENV === "production",
-        sameSite: env_1.env.NODE_ENV === "production" ? "none" : "lax",
+        sameSite: "lax",
         maxAge: adminSession_1.ADMIN_SESSION_DAYS * 24 * 60 * 60 * 1000,
         path: "/",
     };
 }
 exports.adminAuthRoutes = (0, express_1.Router)();
-exports.adminAuthRoutes.post("/admin/auth/login", (0, validation_1.validateBody)(loginSchema), async (req, res, next) => {
+exports.adminAuthRoutes.post("/admin/auth/login", loginLimiter, (0, validation_1.validateBody)(loginSchema), async (req, res, next) => {
     try {
         const user = await prisma_1.prisma.adminUser.findUnique({ where: { email: req.body.email.toLowerCase() } });
         if (!user || !user.active)

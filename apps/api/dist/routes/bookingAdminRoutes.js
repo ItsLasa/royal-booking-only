@@ -30,27 +30,27 @@ exports.bookingAdminRoutes.post("/admin/bookings", (0, auth_1.requireRole)(["OWN
     const booking = await (0, bookingAdminService_1.createManualBooking)(prisma_1.prisma, req.adminUser, req.body, (0, audit_1.auditMetaFrom)(req));
     res.status(201).json((0, apiResponse_1.ok)(booking));
 }));
-exports.bookingAdminRoutes.patch("/admin/bookings/:id", (0, validation_1.validateBody)(zod_1.z.object({ specialRequests: zod_1.z.string().max(1000).optional(), internalNotes: zod_1.z.string().max(2000).optional() })), (0, asyncHandler_1.asyncHandler)(async (req, res) => {
+exports.bookingAdminRoutes.patch("/admin/bookings/:id", (0, auth_1.requireRole)(["OWNER", "MANAGER", "RECEPTION"]), (0, validation_1.validateBody)(zod_1.z.object({ specialRequests: zod_1.z.string().max(1000).optional(), internalNotes: zod_1.z.string().max(2000).optional() })), (0, asyncHandler_1.asyncHandler)(async (req, res) => {
     res.json((0, apiResponse_1.ok)(await (0, bookingAdminService_1.updateBooking)(prisma_1.prisma, req.adminUser, String(req.params.id), req.body, (0, audit_1.auditMetaFrom)(req))));
 }));
-exports.bookingAdminRoutes.post("/admin/bookings/:id/confirm", (0, asyncHandler_1.asyncHandler)(async (req, res) => {
+exports.bookingAdminRoutes.post("/admin/bookings/:id/confirm", (0, auth_1.requireRole)(["OWNER", "MANAGER", "RECEPTION", "ACCOUNTANT"]), (0, asyncHandler_1.asyncHandler)(async (req, res) => {
     res.json((0, apiResponse_1.ok)(await (0, bookingAdminService_1.confirmBooking)(prisma_1.prisma, req.adminUser, String(req.params.id), (0, audit_1.auditMetaFrom)(req))));
 }));
 exports.bookingAdminRoutes.post("/admin/bookings/:id/cancel", (0, auth_1.requireRole)(["OWNER", "MANAGER"]), (0, validation_1.validateBody)(zod_1.z.object({ reason: zod_1.z.string().max(1000).optional() })), (0, asyncHandler_1.asyncHandler)(async (req, res) => {
     res.json((0, apiResponse_1.ok)(await (0, bookingAdminService_1.cancelBooking)(prisma_1.prisma, req.adminUser, String(req.params.id), req.body.reason, (0, audit_1.auditMetaFrom)(req))));
 }));
-exports.bookingAdminRoutes.post("/admin/bookings/:id/check-in", (0, asyncHandler_1.asyncHandler)(async (req, res) => {
+exports.bookingAdminRoutes.post("/admin/bookings/:id/check-in", (0, auth_1.requireRole)(["OWNER", "MANAGER", "RECEPTION"]), (0, asyncHandler_1.asyncHandler)(async (req, res) => {
     res.json((0, apiResponse_1.ok)(await (0, bookingAdminService_1.checkInBooking)(prisma_1.prisma, req.adminUser, String(req.params.id), (0, audit_1.auditMetaFrom)(req))));
 }));
-exports.bookingAdminRoutes.post("/admin/bookings/:id/check-out", (0, asyncHandler_1.asyncHandler)(async (req, res) => {
+exports.bookingAdminRoutes.post("/admin/bookings/:id/check-out", (0, auth_1.requireRole)(["OWNER", "MANAGER", "RECEPTION"]), (0, asyncHandler_1.asyncHandler)(async (req, res) => {
     res.json((0, apiResponse_1.ok)(await (0, bookingAdminService_1.checkOutBooking)(prisma_1.prisma, req.adminUser, String(req.params.id), (0, audit_1.auditMetaFrom)(req))));
 }));
 exports.bookingAdminRoutes.post("/admin/bookings/:id/no-show", (0, auth_1.requireRole)(["OWNER", "MANAGER", "RECEPTION"]), (0, asyncHandler_1.asyncHandler)(async (req, res) => {
     res.json((0, apiResponse_1.ok)(await (0, bookingAdminService_1.markNoShow)(prisma_1.prisma, req.adminUser, String(req.params.id), (0, audit_1.auditMetaFrom)(req))));
 }));
-exports.bookingAdminRoutes.post("/admin/bookings/:id/extend", (0, validation_1.validateBody)(zod_1.z.object({ checkOutDate: zod_1.z.string().date() })), (0, asyncHandler_1.asyncHandler)(async (req, res) => {
+exports.bookingAdminRoutes.post("/admin/bookings/:id/extend", (0, auth_1.requireRole)(["OWNER", "MANAGER", "RECEPTION"]), (0, validation_1.validateBody)(zod_1.z.object({ checkOutDate: zod_1.z.string().date() })), (0, asyncHandler_1.asyncHandler)(async (req, res) => {
     res.json((0, apiResponse_1.ok)(await (0, bookingAdminService_1.extendStay)(prisma_1.prisma, req.adminUser, String(req.params.id), req.body.checkOutDate, (0, audit_1.auditMetaFrom)(req))));
 }));
-exports.bookingAdminRoutes.post("/admin/bookings/:id/change-room", (0, validation_1.validateBody)(zod_1.z.object({ unitId: zod_1.z.string().min(1) })), (0, asyncHandler_1.asyncHandler)(async (req, res) => {
+exports.bookingAdminRoutes.post("/admin/bookings/:id/change-room", (0, auth_1.requireRole)(["OWNER", "MANAGER", "RECEPTION"]), (0, validation_1.validateBody)(zod_1.z.object({ unitId: zod_1.z.string().min(1) })), (0, asyncHandler_1.asyncHandler)(async (req, res) => {
     res.json((0, apiResponse_1.ok)(await (0, bookingAdminService_1.changeRoom)(prisma_1.prisma, req.adminUser, String(req.params.id), req.body.unitId, (0, audit_1.auditMetaFrom)(req))));
 }));

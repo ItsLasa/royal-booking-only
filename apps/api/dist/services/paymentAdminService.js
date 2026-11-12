@@ -94,16 +94,48 @@ async function refundPayment(prisma, actor, id, input, meta) {
         throw new apiResponse_1.ApiError(404, "PAYMENT_NOT_FOUND", "Payment not found.");
     if (!payment.verified || payment.status === "REFUNDED")
         throw new apiResponse_1.ApiError(409, "NOT_REFUNDABLE", "This payment cannot be refunded.");
+    const currentPaid = new decimal_js_1.default(payment.booking.amountPaid.toString());
+    if (currentPaid.lte(0)) {
+        throw new apiResponse_1.ApiError(400, "NO_FUNDS_TO_REFUND", "No paid amount remains on this booking to refund.");
+    }
     const refundAmount = input.amount ? new decimal_js_1.default(input.amount.toString()) : new decimal_js_1.default(payment.amount.toString());
-    if (refundAmount.lte(0) || refundAmount.gt(payment.amount.toString()))
-        throw new apiResponse_1.ApiError(400, "INVALID_AMOUNT", "Refund amount exceeds the payment.");
+    if (refundAmount.lte(0) || refundAmount.gt(payment.amount.toString()) || refundAmount.gt(currentPaid)) {
+        throw new apiResponse_1.ApiError(400, "INVALID_AMOUNT", `Refund amount of ${refundAmount.toFixed(2)} exceeds remaining refundable balance of ${currentPaid.toFixed(2)}.`);
+    }
     const updated = await prisma.$transaction(async (tx) => {
-        const pay = await tx.payment.update({ where: { id }, data: { status: refundAmount.equals(payment.amount.toString()) ? "REFUNDED" : "PARTIALLY_REFUNDED", failureReason: input.reason ?? null }, include: { booking: true } });
-        const paid = new decimal_js_1.default(pay.booking.amountPaid.toString()).minus(refundAmount);
+        const isFullRefund = refundAmount.equals(payment.amount.toString()) || refundAmount.equals(currentPaid);
+        const pay = await tx.payment.update({
+            where: { id },
+            data: {
+                status: isFullRefund ? "REFUNDED" : "PARTIALLY_REFUNDED",
+                failureReason: input.reason ?? null,
+            },
+            include: { booking: true },
+        });
+        const paid = currentPaid.minus(refundAmount);
         const amountPaid = paid.lte(0) ? "0" : paid.toFixed(2);
         const balanceDue = new decimal_js_1.default(pay.booking.grandTotal.toString()).minus(amountPaid);
-        const booking = await tx.booking.update({ where: { id: pay.bookingId }, data: { amountPaid, balanceDue: balanceDue.toFixed(2), paymentStatus: refundAmount.equals(payment.amount.toString()) ? "REFUNDED" : "PARTIALLY_REFUNDED" } });
-        await tx.auditLog.create({ data: { adminUserId: actor.id, action: "PAYMENT_REFUNDED", entityType: "Payment", entityId: pay.id, oldValues: { status: payment.status }, newValues: { status: pay.status, amount: refundAmount.toFixed(2), reason: input.reason ?? null }, ipAddress: meta?.ipAddress, userAgent: meta?.userAgent } });
+        const paymentStatus = paid.lte(0) ? "REFUNDED" : "PARTIALLY_REFUNDED";
+        const booking = await tx.booking.update({
+            where: { id: pay.bookingId },
+            data: {
+                amountPaid,
+                balanceDue: balanceDue.toFixed(2),
+                paymentStatus,
+            },
+        });
+        await tx.auditLog.create({
+            data: {
+                adminUserId: actor.id,
+                action: "PAYMENT_REFUNDED",
+                entityType: "Payment",
+                entityId: pay.id,
+                oldValues: { status: payment.status },
+                newValues: { status: pay.status, amount: refundAmount.toFixed(2), reason: input.reason ?? null },
+                ipAddress: meta?.ipAddress,
+                userAgent: meta?.userAgent,
+            },
+        });
         return { payment: pay, booking };
     });
     return updated;

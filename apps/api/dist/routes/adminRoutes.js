@@ -61,13 +61,13 @@ const blockSchema = zod_1.z.object({
     reason: zod_1.z.string().min(1),
     notes: zod_1.z.string().max(1000).optional(),
 });
-exports.adminRoutes.post("/admin/availability-blocks", (0, validation_1.validateBody)(blockSchema), (0, asyncHandler_1.asyncHandler)(async (req, res) => {
+exports.adminRoutes.post("/admin/availability-blocks", (0, auth_1.requireRole)(["OWNER", "MANAGER"]), (0, validation_1.validateBody)(blockSchema), (0, asyncHandler_1.asyncHandler)(async (req, res) => {
     const block = await (0, adminService_1.createAvailabilityBlock)(prisma_1.prisma, req.adminUser, req.body, (0, audit_1.auditMetaFrom)(req));
     res.status(201).json((0, apiResponse_1.ok)(block));
 }));
-exports.adminRoutes.patch("/admin/availability-blocks/:id", (0, validation_1.validateBody)(blockSchema.partial()), (0, asyncHandler_1.asyncHandler)(async (req, res) => {
+exports.adminRoutes.patch("/admin/availability-blocks/:id", (0, auth_1.requireRole)(["OWNER", "MANAGER"]), (0, validation_1.validateBody)(blockSchema.partial()), (0, asyncHandler_1.asyncHandler)(async (req, res) => {
     res.json((0, apiResponse_1.ok)(await (0, adminService_1.updateAvailabilityBlock)(prisma_1.prisma, req.adminUser, String(req.params.id), req.body, (0, audit_1.auditMetaFrom)(req))));
 }));
-exports.adminRoutes.delete("/admin/availability-blocks/:id", (0, asyncHandler_1.asyncHandler)(async (req, res) => {
+exports.adminRoutes.delete("/admin/availability-blocks/:id", (0, auth_1.requireRole)(["OWNER", "MANAGER"]), (0, asyncHandler_1.asyncHandler)(async (req, res) => {
     res.json((0, apiResponse_1.ok)(await (0, adminService_1.deleteAvailabilityBlock)(prisma_1.prisma, req.adminUser, String(req.params.id), (0, audit_1.auditMetaFrom)(req))));
 }));

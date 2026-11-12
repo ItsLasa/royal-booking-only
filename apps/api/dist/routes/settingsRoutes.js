@@ -10,7 +10,7 @@ const auth_1 = require("../middleware/auth");
 const audit_1 = require("../lib/audit");
 const settingsService_1 = require("../services/settingsService");
 exports.settingsRoutes = (0, express_1.Router)();
-exports.settingsRoutes.use(auth_1.requireAdmin);
+exports.settingsRoutes.use(auth_1.requireAdmin, (0, auth_1.requireRole)(["OWNER", "MANAGER"]));
 exports.settingsRoutes.get("/admin/settings", (0, asyncHandler_1.asyncHandler)(async (_req, res) => {
     res.json((0, apiResponse_1.ok)(await (0, settingsService_1.getAllSettings)(prisma_1.prisma)));
 }));

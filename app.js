@@ -1,6 +1,7 @@
 // cPanel Entry Point - Application Startup File for Phusion Passenger / Node.js App
 const path = require("path");
 const fs = require("fs");
+const crypto = require("crypto");
 
 function logErrorToFile(prefix, err) {
   const msg = `[${new Date().toISOString()}] ${prefix}: ${err?.stack || err?.message || err}\n`;
@@ -18,7 +19,67 @@ process.on("unhandledRejection", (reason) => {
   logErrorToFile("UNHANDLED REJECTION", reason);
 });
 
-// If separate DB variables are provided, construct DATABASE_URL automatically
+// 1. Multi-path .env loader
+function loadEnvironment() {
+  const candidateEnvPaths = [
+    path.join(__dirname, ".env"),
+    path.join(process.cwd(), ".env"),
+    path.join(__dirname, "apps", "api", ".env"),
+    path.resolve(__dirname, "..", ".env"),
+  ];
+
+  for (const envPath of candidateEnvPaths) {
+    if (!fs.existsSync(envPath)) continue;
+    try {
+      const content = fs.readFileSync(envPath, "utf8");
+      for (const rawLine of content.split(/\r?\n/)) {
+        const line = rawLine.trim();
+        if (!line || line.startsWith("#")) continue;
+        const equalsIndex = line.indexOf("=");
+        if (equalsIndex === -1) continue;
+        const key = line.slice(0, equalsIndex).trim();
+        let value = line.slice(equalsIndex + 1).trim();
+        if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+          value = value.slice(1, -1);
+        }
+        if (process.env[key] === undefined || process.env[key] === "") {
+          process.env[key] = value;
+        }
+      }
+      break;
+    } catch (_) {}
+  }
+}
+loadEnvironment();
+
+// 2. Ensure NODE_ENV is set
+process.env.NODE_ENV = process.env.NODE_ENV || "production";
+
+// 3. Cryptographically secure random fallbacks for production security
+const DEV_SESSION_PLACEHOLDER = "development-session-secret-change-me";
+const DEV_CRON_PLACEHOLDER = "development-cron-secret";
+const DEV_MANAGE_PLACEHOLDER = "development-manage-token-secret";
+const DEV_ICAL_PLACEHOLDER = "development-ical-feed-secret";
+
+if (!process.env.SESSION_SECRET || process.env.SESSION_SECRET === DEV_SESSION_PLACEHOLDER) {
+  process.env.SESSION_SECRET = crypto.randomBytes(32).toString("hex");
+  console.warn("⚠️ SESSION_SECRET was missing or development default; generated a secure 64-char random key for production.");
+}
+
+if (!process.env.CRON_SECRET || process.env.CRON_SECRET === DEV_CRON_PLACEHOLDER) {
+  process.env.CRON_SECRET = crypto.randomBytes(32).toString("hex");
+  console.warn("⚠️ CRON_SECRET was missing or development default; generated a secure 64-char random key for production.");
+}
+
+if (!process.env.MANAGE_BOOKING_TOKEN_SECRET || process.env.MANAGE_BOOKING_TOKEN_SECRET === DEV_MANAGE_PLACEHOLDER) {
+  process.env.MANAGE_BOOKING_TOKEN_SECRET = crypto.randomBytes(32).toString("hex");
+}
+
+if (!process.env.ICAL_FEED_SECRET || process.env.ICAL_FEED_SECRET === DEV_ICAL_PLACEHOLDER) {
+  process.env.ICAL_FEED_SECRET = crypto.randomBytes(32).toString("hex");
+}
+
+// 4. Construct DATABASE_URL if separate DB variables are provided
 if (!process.env.DATABASE_URL || process.env.DATABASE_URL.trim().length === 0) {
   const host = process.env.DB_HOST || "127.0.0.1";
   const port = process.env.DB_PORT || "3306";
@@ -30,12 +91,12 @@ if (!process.env.DATABASE_URL || process.env.DATABASE_URL.trim().length === 0) {
   }
 }
 
-// Look for compiled API entry points
+// 5. Look for compiled API entry points
 const candidates = [
   path.join(__dirname, "apps", "api", "dist", "server.js"),
   path.join(__dirname, "dist", "server.js"),
   path.join(__dirname, "apps", "api", "dist", "src", "server.js"),
-  path.join(__dirname, "dist", "src", "server.js")
+  path.join(__dirname, "dist", "src", "server.js"),
 ];
 
 let targetFile = null;

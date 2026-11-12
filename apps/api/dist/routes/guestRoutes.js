@@ -10,7 +10,7 @@ const validation_1 = require("../middleware/validation");
 const auth_1 = require("../middleware/auth");
 const guestService_1 = require("../services/guestService");
 exports.guestRoutes = (0, express_1.Router)();
-exports.guestRoutes.use(auth_1.requireAdmin);
+exports.guestRoutes.use(auth_1.requireAdmin, (0, auth_1.requireRole)(["OWNER", "MANAGER", "RECEPTION"]));
 exports.guestRoutes.get("/admin/guests", (0, asyncHandler_1.asyncHandler)(async (req, res) => {
     const query = zod_1.z.object({ search: zod_1.z.string().optional(), page: zod_1.z.coerce.number().int().min(1).optional(), pageSize: zod_1.z.coerce.number().int().min(1).max(100).optional() }).parse(req.query);
     res.json((0, apiResponse_1.ok)(await (0, guestService_1.listGuests)(prisma_1.prisma, query)));

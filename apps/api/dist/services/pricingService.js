@@ -87,17 +87,19 @@ async function calculateQuote(prisma, input) {
         discountTotal = coupon.discountType === "PERCENTAGE" ? subtotal.mul(coupon.discountValue.toString()).div(100) : (0, money_1.money)(coupon.discountValue.toString());
         if (coupon.maximumDiscount)
             discountTotal = decimal_js_1.default.min(discountTotal, new decimal_js_1.default(coupon.maximumDiscount.toString()));
+        discountTotal = decimal_js_1.default.min(discountTotal, subtotal);
         discountTotal = (0, money_1.money)(discountTotal);
         lines.push({ type: "DISCOUNT", description: `Coupon ${coupon.code}`, quantity: 1, unitAmount: -(0, money_1.toNumber)(discountTotal), totalAmount: -(0, money_1.toNumber)(discountTotal), metadata: { couponId: coupon.id } });
     }
-    const taxable = subtotal.plus(addOnTotal).minus(discountTotal);
+    const rawTaxable = subtotal.plus(addOnTotal).minus(discountTotal);
+    const taxable = (0, money_1.money)(decimal_js_1.default.max(0, rawTaxable));
     const serviceChargeTotal = (0, money_1.money)(taxable.mul(pkg.property.serviceChargePercentage.toString()).div(100));
     const taxTotal = (0, money_1.money)(taxable.plus(serviceChargeTotal).mul(pkg.property.taxPercentage.toString()).div(100));
     if (!serviceChargeTotal.isZero())
         lines.push({ type: "SERVICE_CHARGE", description: "Service charge", quantity: 1, unitAmount: (0, money_1.toNumber)(serviceChargeTotal), totalAmount: (0, money_1.toNumber)(serviceChargeTotal) });
     if (!taxTotal.isZero())
         lines.push({ type: "TAX", description: "Tax", quantity: 1, unitAmount: (0, money_1.toNumber)(taxTotal), totalAmount: (0, money_1.toNumber)(taxTotal) });
-    const grandTotal = (0, money_1.money)(taxable.plus(serviceChargeTotal).plus(taxTotal));
-    const depositRequired = input.paymentOption === "FULL" ? grandTotal : (0, money_1.money)(grandTotal.mul(pkg.depositPercentage.toString()).div(100));
+    const grandTotal = (0, money_1.money)(decimal_js_1.default.max(0, taxable.plus(serviceChargeTotal).plus(taxTotal)));
+    const depositRequired = input.paymentOption === "FULL" ? grandTotal : (0, money_1.money)(decimal_js_1.default.max(0, grandTotal.mul(pkg.depositPercentage.toString()).div(100)));
     return { package: pkg, nights, lines, subtotal: (0, money_1.toNumber)(subtotal), addOnTotal: (0, money_1.toNumber)(addOnTotal), discountTotal: (0, money_1.toNumber)(discountTotal), serviceChargeTotal: (0, money_1.toNumber)(serviceChargeTotal), taxTotal: (0, money_1.toNumber)(taxTotal), grandTotal: (0, money_1.toNumber)(grandTotal), depositRequired: (0, money_1.toNumber)(depositRequired), amountDueNow: (0, money_1.toNumber)(depositRequired), balanceDue: (0, money_1.toNumber)(grandTotal.minus(depositRequired)), currency: pkg.property.currency, couponId: coupon?.id };
 }

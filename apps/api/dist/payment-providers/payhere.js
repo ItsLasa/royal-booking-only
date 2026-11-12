@@ -6,6 +6,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.PayHerePaymentProvider = void 0;
 exports.processPayHereNotification = processPayHereNotification;
 const crypto_1 = __importDefault(require("crypto"));
+const decimal_js_1 = __importDefault(require("decimal.js"));
 const env_1 = require("../config/env");
 const apiResponse_1 = require("../lib/apiResponse");
 class PayHerePaymentProvider {
@@ -25,8 +26,11 @@ class PayHerePaymentProvider {
         if (input.merchant_id !== env_1.env.PAYHERE_MERCHANT_ID)
             throw new apiResponse_1.ApiError(400, "PAYHERE_MERCHANT_MISMATCH", "PayHere merchant does not match configuration.");
         const expected = this.notificationHash(input.merchant_id, input.order_id, input.payhere_amount, input.payhere_currency, input.status_code);
-        if (expected !== input.md5sig.toUpperCase())
+        const expectedBuf = Buffer.from(expected);
+        const actualBuf = Buffer.from(input.md5sig.toUpperCase());
+        if (expectedBuf.length !== actualBuf.length || !crypto_1.default.timingSafeEqual(expectedBuf, actualBuf)) {
             throw new apiResponse_1.ApiError(400, "PAYHERE_SIGNATURE_INVALID", "PayHere callback signature is invalid.");
+        }
         return { orderId: input.order_id, paymentId: input.payment_id, amount: Number(input.payhere_amount), currency: input.payhere_currency, statusCode: input.status_code, rawStatusCode: input.status_code, success: input.status_code === "2" };
     }
     checkoutHash(orderId, amount, currency) {
@@ -51,10 +55,22 @@ async function processPayHereNotification(prisma, provider, payload) {
             return { payment, booking: payment.booking, duplicate: true };
         if (Number(payment.amount) !== verified.amount || payment.currency !== verified.currency)
             throw new apiResponse_1.ApiError(400, "PAYHERE_AMOUNT_MISMATCH", "Payment amount or currency does not match the booking.");
-        const status = verified.success ? (Number(payment.amount) >= Number(payment.booking.grandTotal) ? "PAID" : "PARTIALLY_PAID") : "FAILED";
+        const grandTotal = new decimal_js_1.default(payment.booking.grandTotal.toString());
+        const payAmount = new decimal_js_1.default(payment.amount.toString());
+        const balanceRemaining = decimal_js_1.default.max(0, grandTotal.minus(payAmount));
+        const status = verified.success ? (payAmount.greaterThanOrEqualTo(grandTotal) ? "PAID" : "PARTIALLY_PAID") : "FAILED";
         const bookingStatus = verified.success ? "CONFIRMED" : payment.booking.bookingStatus;
         const updated = await tx.payment.update({ where: { id: payment.id }, data: { providerPaymentId: verified.paymentId, rawStatusCode: verified.rawStatusCode, verified: verified.success, status, processedAt: new Date(), failureReason: verified.success ? null : "PayHere reported a failed payment." } });
-        const booking = await tx.booking.update({ where: { id: payment.bookingId }, data: { bookingStatus, paymentStatus: status, amountPaid: verified.success ? payment.amount : payment.booking.amountPaid, balanceDue: verified.success ? Number(payment.booking.grandTotal) - Number(payment.amount) : payment.booking.balanceDue, confirmedAt: verified.success ? new Date() : payment.booking.confirmedAt } });
+        const booking = await tx.booking.update({
+            where: { id: payment.bookingId },
+            data: {
+                bookingStatus,
+                paymentStatus: status,
+                amountPaid: verified.success ? payAmount.toFixed(2) : payment.booking.amountPaid,
+                balanceDue: verified.success ? balanceRemaining.toFixed(2) : payment.booking.balanceDue,
+                confirmedAt: verified.success ? (payment.booking.confirmedAt ?? new Date()) : payment.booking.confirmedAt,
+            },
+        });
         return { payment: updated, booking, duplicate: false };
     });
 }

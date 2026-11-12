@@ -36,13 +36,16 @@ function findNextDir() {
         process.cwd(),
         path_1.default.resolve(__dirname, "../../.."),
         path_1.default.resolve(__dirname, "../.."),
+        path_1.default.resolve(__dirname, "../../../.."),
     ];
     for (const c of candidates) {
-        if (fs_1.default.existsSync(path_1.default.join(c, ".next", "BUILD_ID"))) {
-            return { dir: c, type: "standalone" };
-        }
         if (fs_1.default.existsSync(path_1.default.join(c, "out", "index.html"))) {
             return { dir: c, type: "export" };
+        }
+        const buildId = path_1.default.join(c, ".next", "BUILD_ID");
+        const routesManifest = path_1.default.join(c, ".next", "routes-manifest.json");
+        if (fs_1.default.existsSync(buildId) && fs_1.default.existsSync(routesManifest)) {
+            return { dir: c, type: "standalone" };
         }
     }
     return null;
@@ -50,7 +53,23 @@ function findNextDir() {
 function createApp() {
     const app = (0, express_1.default)();
     app.set("trust proxy", 1);
-    app.use((0, helmet_1.default)({ contentSecurityPolicy: false }));
+    app.use((0, helmet_1.default)({
+        contentSecurityPolicy: {
+            directives: {
+                defaultSrc: ["'self'"],
+                scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+                styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+                fontSrc: ["'self'", "https://fonts.gstatic.com", "data:"],
+                imgSrc: ["'self'", "data:", "blob:", "https:"],
+                connectSrc: ["'self'", env_1.env.FRONTEND_URL, env_1.env.API_URL, "https://*.payhere.lk", "https://wa.me"],
+                frameSrc: ["'self'", "https://*.payhere.lk"],
+                objectSrc: ["'none'"],
+                baseUri: ["'self'"],
+                formAction: ["'self'", "https://*.payhere.lk"],
+            },
+        },
+        crossOriginEmbedderPolicy: false,
+    }));
     app.use((0, cookie_parser_1.default)(env_1.env.SESSION_SECRET));
     app.use((0, pino_http_1.default)({
         autoLogging: {
@@ -73,7 +92,9 @@ function createApp() {
         res.status(404).json({ success: false, error: { code: "NOT_FOUND", message: "API endpoint not found" } });
     });
     // Next.js Frontend Integration (serves /, /about, /packages, /book, /admin, /_next/*, etc.)
-    const frontend = findNextDir();
+    // Only embed Next.js in production (e.g. cPanel). In development, `next dev` runs separately on port 3000.
+    const isProduction = process.env.NODE_ENV === "production";
+    const frontend = isProduction ? findNextDir() : null;
     if (frontend && process.env.NODE_ENV !== "test") {
         if (frontend.type === "export") {
             const outDir = path_1.default.join(frontend.dir, "out");
@@ -109,14 +130,16 @@ function createApp() {
                         }
                     }
                     if (nextInitError) {
+                        const errorDetails = env_1.env.NODE_ENV === "production"
+                            ? "The web application is temporarily undergoing maintenance. Please try again shortly or contact support."
+                            : nextInitError.stack || nextInitError.message;
                         return res.status(500).type("html").send(`
               <!DOCTYPE html>
               <html>
-                <head><title>Frontend Startup Error</title></head>
-                <body style="font-family: sans-serif; padding: 40px; background: #0f172a; color: #f8fafc;">
-                  <h2>Next.js Frontend Startup Error</h2>
-                  <p>The backend API is running, but the Next.js frontend encountered an error while starting:</p>
-                  <pre style="background: #1e293b; padding: 16px; border-radius: 8px; overflow: auto; color: #f43f5e;">${nextInitError.stack || nextInitError.message}</pre>
+                <head><title>Service Temporarily Unavailable</title></head>
+                <body style="font-family: sans-serif; padding: 40px; background: #0f172a; color: #f8fafc; text-align: center;">
+                  <h2>Royal Mansion Resort & Villa</h2>
+                  <p>${errorDetails}</p>
                 </body>
               </html>
             `);

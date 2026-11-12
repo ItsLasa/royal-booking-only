@@ -31,13 +31,16 @@ function findNextDir(): { dir: string; type: "standalone" | "export" } | null {
     process.cwd(),
     path.resolve(__dirname, "../../.."),
     path.resolve(__dirname, "../.."),
+    path.resolve(__dirname, "../../../.."),
   ];
   for (const c of candidates) {
-    if (fs.existsSync(path.join(c, ".next", "BUILD_ID"))) {
-      return { dir: c, type: "standalone" };
-    }
     if (fs.existsSync(path.join(c, "out", "index.html"))) {
       return { dir: c, type: "export" };
+    }
+    const buildId = path.join(c, ".next", "BUILD_ID");
+    const routesManifest = path.join(c, ".next", "routes-manifest.json");
+    if (fs.existsSync(buildId) && fs.existsSync(routesManifest)) {
+      return { dir: c, type: "standalone" };
     }
   }
   return null;

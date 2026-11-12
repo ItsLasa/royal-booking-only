@@ -31,8 +31,8 @@ async function getDashboardSummary(prisma) {
         prisma.booking.findMany({ take: 8, orderBy: { createdAt: "desc" }, include: { guest: true, package: true, payments: true } }),
         prisma.payment.findMany({ take: 8, orderBy: { createdAt: "desc" }, include: { booking: { include: { guest: true } } } }),
         prisma.auditLog.findMany({ take: 6, orderBy: { createdAt: "desc" }, include: { adminUser: true } }),
-        prisma.booking.groupBy({ by: ["createdAt"], where: { createdAt: { gte: new Date(todayStart.getTime() - 90 * 86_400_000) } }, _count: true }),
-        prisma.booking.groupBy({ by: ["createdAt"], where: { bookingStatus: { not: "CANCELLED" }, createdAt: { gte: new Date(todayStart.getTime() - 180 * 86_400_000) } }, _sum: { grandTotal: true } }),
+        prisma.booking.findMany({ where: { createdAt: { gte: new Date(todayStart.getTime() - 90 * 86_400_000) } }, select: { createdAt: true }, take: 3000 }),
+        prisma.booking.findMany({ where: { bookingStatus: { not: "CANCELLED" }, createdAt: { gte: new Date(todayStart.getTime() - 180 * 86_400_000) } }, select: { createdAt: true, grandTotal: true }, take: 3000 }),
         prisma.booking.findMany({ where: { bookingStatus: { in: ["CONFIRMED", "COMPLETED"] }, checkInDate: { lt: tomorrow }, checkOutDate: { gt: todayStart } } }),
     ]);
     const activeUnits = units.filter((u) => u.active).reduce((sum, u) => sum + u.inventoryCount, 0);
@@ -47,10 +47,9 @@ async function getDashboardSummary(prisma) {
         for (const row of rows) {
             const key = row.createdAt.toISOString().slice(0, 10);
             const entry = map.get(key) ?? { bookings: 0, revenue: 0 };
-            if (row._count)
-                entry.bookings += row._count;
-            if (row._sum?.grandTotal)
-                entry.revenue += Number(row._sum.grandTotal);
+            entry.bookings += 1;
+            if (row.grandTotal)
+                entry.revenue += Number(row.grandTotal);
             map.set(key, entry);
         }
         return [...map.entries()].sort((a, b) => a[0].localeCompare(b[0])).map(([date, value]) => ({ date, ...value }));
