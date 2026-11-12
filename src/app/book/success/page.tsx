@@ -1,0 +1,4 @@
+"use client";
+import Header from "@/components/Header";
+import Footer from "@/components/Footer";
+export default function SuccessPage() { return <><Header /><main className="min-h-screen bg-ivory px-margin-mobile pb-20 pt-36 md:px-margin-desktop font-open-sans"><div className="mx-auto max-w-3xl bg-white p-8"><p className="text-label-lg font-semibold uppercase tracking-widest text-tertiary">Booking Received</p><h1 className="mt-3 text-headline-lg-mobile font-bold text-primary md:text-headline-lg">Thank you for booking Royal Mansion.</h1><p className="mt-4 text-on-surface-variant">Your booking status is confirmed only after the server receives and verifies the PayHere callback, or after an admin verifies bank transfer.</p><button onClick={() => window.print()} className="mt-8 bg-primary px-6 py-4 text-label-lg font-semibold uppercase tracking-widest text-white transition-opacity hover:opacity-90">Print</button></div></main><Footer /></>; }

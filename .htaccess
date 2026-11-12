@@ -1,0 +1,28 @@
+# Apache / cPanel configuration for Node.js Application
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+
+  # Force HTTPS
+  RewriteCond %{HTTPS} off
+  RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+  # Pass Authorization header to Node.js
+  RewriteCond %{HTTP:Authorization} .
+  RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+</IfModule>
+
+# Phusion Passenger configuration (if cPanel Node.js App uses Passenger in this folder)
+<IfModule mod_passenger.c>
+  PassengerAppRoot "/home/USER/PATH_TO_APP"
+  PassengerBaseURI "/"
+  PassengerNodejs "/home/USER/nodevenv/PATH_TO_APP/20/bin/node"
+  PassengerAppType node
+  PassengerStartupFile app.js
+</IfModule>
+
+# Security Headers
+<IfModule mod_headers.c>
+  Header always set X-Content-Type-Options "nosniff"
+  Header always set X-Frame-Options "SAMEORIGIN"
+  Header always set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>

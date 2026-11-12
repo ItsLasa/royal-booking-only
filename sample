@@ -1,0 +1,58 @@
+# ==============================================================================
+# Environment Configuration for Royal Mansion Resort (cPanel Production)
+# Domain: https://re.royalmansionresorts.com
+# ==============================================================================
+
+# Node Environment
+NODE_ENV=production
+PORT=3000
+
+# Front-end & API Domain (Both running on your domain)
+FRONTEND_URL=https://re.royalmansionresorts.com
+API_URL=https://re.royalmansionresorts.com
+NEXT_PUBLIC_API_BASE_URL=https://re.royalmansionresorts.com/api/v1
+
+# ------------------------------------------------------------------------------
+# MySQL Database Configuration (Separate Variables)
+# No need to manually construct DATABASE_URL or URL-encode special characters!
+# ------------------------------------------------------------------------------
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_USER=cpaneluser_dbadmin
+DB_PASSWORD=YourDatabasePasswordHere123!
+DB_NAME=cpaneluser_royalmansion
+
+# (Optional fallback: you can still use a single DATABASE_URL if you prefer)
+# DATABASE_URL="mysql://cpaneluser_dbadmin:YourPassword@127.0.0.1:3306/cpaneluser_royalmansion"
+
+# ------------------------------------------------------------------------------
+# Security Secrets (Secure 32+ character random strings)
+# ------------------------------------------------------------------------------
+SESSION_SECRET="e9b251e6b3604f8bb64b5894172f854198305c6bf754041b312a02b1db"
+CRON_SECRET="f3c09b11d54238e55e09f7a77d5b1e428a4c84918f62c072e5"
+MANAGE_BOOKING_TOKEN_SECRET="4a7e9375e243444eb1c4be8f75b11293a1cf5525"
+ICAL_FEED_SECRET="c20188bb3e970b50325418b6e22f28b4920b784a"
+
+# ------------------------------------------------------------------------------
+# Resort & Booking Defaults
+# ------------------------------------------------------------------------------
+PROPERTY_TIMEZONE="Asia/Colombo"
+DEFAULT_CURRENCY="LKR"
+BOOKING_HOLD_MINUTES=15
+
+# ------------------------------------------------------------------------------
+# Payment Gateway (PayHere Sri Lanka)
+# ------------------------------------------------------------------------------
+PAYHERE_MODE=sandbox
+PAYHERE_MERCHANT_ID=
+PAYHERE_MERCHANT_SECRET=
+PAYHERE_NOTIFY_URL=https://re.royalmansionresorts.com/api/v1/payments/payhere/notify
+PAYHERE_RETURN_URL=https://re.royalmansionresorts.com/book/success
+PAYHERE_CANCEL_URL=https://re.royalmansionresorts.com/book/cancelled
+
+# ------------------------------------------------------------------------------
+# Email Notifications (Optional - Resend)
+# ------------------------------------------------------------------------------
+RESEND_API_KEY=
+EMAIL_FROM=reservations@royalmansionresorts.com
+ADMIN_NOTIFICATION_EMAIL=owner@royalmansionresorts.com

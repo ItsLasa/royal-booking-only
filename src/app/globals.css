@@ -1,0 +1,65 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+@import url('https://fonts.googleapis.com/css2?family=Cossette+Texte&display=swap');
+
+.mea-culpa-regular {
+  font-family: var(--font-mea-culpa), cursive;
+  font-weight: 400;
+  font-style: normal;
+}
+
+.cossette-texte {
+  font-family: "Cossette Texte", serif;
+  font-weight: 400;
+  font-style: normal;
+}
+
+.font-open-sans {
+  font-family: var(--font-open-sans), "Open Sans", sans-serif;
+}
+
+html,
+body {
+  overflow-x: clip;
+  font-family: var(--font-fjalla-one), sans-serif;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+html.lenis,
+html.lenis body {
+  height: auto;
+}
+
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+
+.lenis.lenis-smooth [data-lenis-prevent] {
+  overscroll-behavior: contain;
+}
+
+.lenis.lenis-stopped {
+  overflow: clip;
+}
+
+.lenis.lenis-scrolling iframe {
+  pointer-events: none;
+}
+
+@layer utilities {
+  .text-shadow-sm {
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  }
+
+  .luxury-shadow {
+    box-shadow: 0 10px 30px -10px rgba(6, 27, 14, 0.08);
+  }
+
+  .gpu-layer {
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    will-change: transform;
+  }
+}

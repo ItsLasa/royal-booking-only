@@ -1,0 +1,42 @@
+Deploying “testing” (category: server, image: docker.io/library/node:20).
+Installing dependencies and building.
+Trying to pull docker.io/library/node:20...
+Getting image source signatures
+Copying blob sha256:76e6b8204a89d20e7915fdc9a98ff33cb65fd7ce44ecf5a84b6cfca4bdb3d6d0
+Copying blob sha256:2933ecab0f11302fd71f29aa83ad2904683246f7a8320ad0dc3a60b23f05fee9
+Copying blob sha256:e5203b2bfeff92b72e816dc6cbb1f16856f0cd592e521e3c0cfa195a78fe180e
+Copying blob sha256:db53381ee51f9e43304e236099ba097ae1b33ae41a8007e0b6319992eb55fd00
+Copying blob sha256:c83419f4430962505175b565eb8a24aafeaa4d441c0b22234e94c6e8160848ba
+Copying blob sha256:8fcda2b4d7993820b00c5488d173051e76d01ba6b85620617ba77001b0f9e2fa
+Copying blob sha256:2f2ab6e4eb4619f7b8506c38dc79c8adf77acffb7622bc15ceeabb0fbc73b8a1
+Copying blob sha256:0b22ec2d9b1a1a0e906e301b5ef08efe7774d5fc001b9cfa08e4e980152a0357
+Copying config sha256:33ed5ef90e835c40007b658b2d7cb1354b282bffcb53feceb305e9feff1d98e1
+Writing manifest to image destination
+up to date, audited 642 packages in 2m
+206 packages are looking for funding
+  run `npm fund` for details
+32 vulnerabilities (10 moderate, 16 high, 6 critical)
+To address issues that do not require attention, run:
+  npm audit fix
+To address all issues (including breaking changes), run:
+  npm audit fix --force
+Run `npm audit` for details.
+npm notice
+npm notice New major version of npm available! 10.8.2 -> 12.2.2
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.2.2
+npm notice To update run: npm install -g npm@12.2.2
+npm notice
+> royal-mansion-resort@0.1.0 build
+> npm run build:web && npm run build:api
+> royal-mansion-resort@0.1.0 build:web
+> next build
+Attention: Next.js now collects completely anonymous telemetry regarding usage.
+This information is used to shape Next.js' roadmap and prioritize features.
+You can learn more, including how to opt-out if you'd not like to participate in this anonymous program, by visiting the following URL:
+https://nextjs.org/telemetry
+  ▲ Next.js 14.2.35
+  - Environments: .env
+   Creating an optimized production build ...
+ ⚠ For production Image Optimization with Next.js, the optional 'sharp' package is strongly recommended. Run 'npm i sharp', and Next.js will use it automatically for Image Optimization.
+Read more: https://nextjs.org/docs/messages/sharp-missing-in-production
+Next.js build worker exited with code: null and signal: SIGKILL
