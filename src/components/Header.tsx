@@ -171,6 +171,8 @@ export default function Header({ transparent = false }: HeaderProps) {
         style={{ transform: "translateZ(0)", willChange: "transform" }}
       >
         <div className="mx-auto grid max-w-[1500px] grid-cols-[1fr_auto_1fr] items-center px-margin-mobile md:px-margin-desktop">
+          {/* Menu button hidden/commented out as requested */}
+          {/*
           <motion.button
             ref={toggleButtonRef}
             className="group flex w-fit items-center gap-4 text-[11px] font-medium uppercase leading-none tracking-[0.26em] text-white/88 transition-colors duration-300 hover:text-white"
@@ -182,7 +184,6 @@ export default function Header({ transparent = false }: HeaderProps) {
             onClick={() => setMenuOpen((open) => !open)}
             whileTap={{ scale: 0.94 }}
           >
-            {/* Morphing hamburger -> X */}
             <span className="relative flex h-4 w-8 flex-col justify-center">
               <motion.span
                 className="absolute h-px w-8 origin-center bg-white"
@@ -205,6 +206,8 @@ export default function Header({ transparent = false }: HeaderProps) {
             </span>
             <span className="hidden sm:inline text-[15px] ">{menuOpen ? "Close" : "Menu"}</span>
           </motion.button>
+          */}
+          <div aria-hidden="true" />
 
           <Link
             href="/"
@@ -220,6 +223,8 @@ export default function Header({ transparent = false }: HeaderProps) {
             />
           </Link>
 
+          {/* Booking buttons hidden/commented out as requested */}
+          {/*
           <nav className="hidden items-center justify-end gap-8 md:flex xl:gap-11" aria-label="Primary navigation">
             <Link
               href="/booking"
@@ -240,6 +245,8 @@ export default function Header({ transparent = false }: HeaderProps) {
           >
             Book
           </Link>
+          */}
+          <div aria-hidden="true" />
         </div>
       </header>
 

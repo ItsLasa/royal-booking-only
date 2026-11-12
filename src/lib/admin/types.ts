@@ -58,6 +58,19 @@ export type Package = {
   dateOverrides?: DateRateOverride[];
 };
 
+export type AddOnPricingType = "PER_BOOKING" | "PER_NIGHT" | "PER_GUEST" | "PER_GUEST_PER_NIGHT";
+
+export type AdminAddOn = {
+  id: string;
+  propertyId: string;
+  name: string;
+  description?: string | null;
+  pricingType: AddOnPricingType;
+  price: string | number;
+  maximumQuantity: number;
+  active: boolean;
+};
+
 export type SeasonalRate = {
   id: string;
   packageId: string;

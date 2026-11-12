@@ -1,4 +1,4 @@
 Royal Mansion Resort & Villa API Server
 Backend API is active and healthy: /health
 
-Frontend build (.next/BUILD_ID) not detected yet. Run npm run build or deploy frontend static export to complete setup.
+Frontend build (.next/BUILD_ID) not detected yet. Run npm run build or deploy frontend static export to complete setup.  

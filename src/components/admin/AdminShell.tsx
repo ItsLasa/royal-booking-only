@@ -15,6 +15,7 @@ import {
   HiOutlineTag,
   HiOutlineCreditCard,
   HiOutlineSparkles,
+  HiOutlineSquaresPlus,
   HiOutlineWrenchScrewdriver,
   HiOutlineChartBar,
   HiOutlineUsers,
@@ -40,6 +41,7 @@ const NAV = [
   { section: "Commerce", items: [
     { href: "/admin/rates", label: "Rates", icon: HiOutlineTag },
     { href: "/admin/packages", label: "Packages", icon: HiOutlineSparkles },
+    { href: "/admin/add-ons", label: "Available Extras", icon: HiOutlineSquaresPlus },
     { href: "/admin/payments", label: "Payments", icon: HiOutlineCreditCard },
   ]},
   { section: "Property", items: [
