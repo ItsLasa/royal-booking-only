@@ -11,6 +11,7 @@
         "build:web": "next build",
         "build:api": "prisma generate --schema apps/api/prisma/schema.prisma && tsc -p apps/api/tsconfig.json",
         "build:cpanel": "npm run build:api",
+        "package:cpanel": "node scripts/package-cpanel.js",
         "postinstall": "prisma generate --schema apps/api/prisma/schema.prisma",
         "start": "node app.js",
         "start:web": "next start",

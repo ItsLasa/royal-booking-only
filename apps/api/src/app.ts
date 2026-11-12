@@ -26,7 +26,7 @@ import { calendarRoutes } from "./routes/calendarRoutes";
 import { cronRoutes } from "./routes/cronRoutes";
 import { errorHandler } from "./middleware/validation";
 
-function findNextDir(): { dir: string; type: "standalone" | "export" } | null {
+function findNextDir(): { dir: string; type: "standalone" | "export"; distDir?: string } | null {
   const candidates = [
     process.cwd(),
     path.resolve(__dirname, "../../.."),
@@ -37,10 +37,17 @@ function findNextDir(): { dir: string; type: "standalone" | "export" } | null {
     if (fs.existsSync(path.join(c, "out", "index.html"))) {
       return { dir: c, type: "export" };
     }
+    // Standard .next directory
     const buildId = path.join(c, ".next", "BUILD_ID");
     const routesManifest = path.join(c, ".next", "routes-manifest.json");
     if (fs.existsSync(buildId) && fs.existsSync(routesManifest)) {
-      return { dir: c, type: "standalone" };
+      return { dir: c, type: "standalone", distDir: ".next" };
+    }
+    // Non-hidden next_build fallback for cPanel / FTP systems that strip dot-folders
+    const altBuildId = path.join(c, "next_build", "BUILD_ID");
+    const altRoutesManifest = path.join(c, "next_build", "routes-manifest.json");
+    if (fs.existsSync(altBuildId) && fs.existsSync(altRoutesManifest)) {
+      return { dir: c, type: "standalone", distDir: "next_build" };
     }
   }
   return null;
@@ -131,7 +138,11 @@ export function createApp() {
       try {
         // eslint-disable-next-line @typescript-eslint/no-var-requires
         const next = require("next");
-        const nextApp = next({ dev: false, dir: frontend.dir });
+        const nextApp = next({
+          dev: false,
+          dir: frontend.dir,
+          conf: frontend.distDir ? { distDir: frontend.distDir } : undefined,
+        });
         let nextReady = false;
         let nextInitError: Error | null = null;
         const handle = nextApp.getRequestHandler();

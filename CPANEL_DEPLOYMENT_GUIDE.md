@@ -101,31 +101,31 @@ PAYHERE_CANCEL_URL=https://yourdomain.com/booking/cancel
 
 ---
 
-## Step 5: Upload Files & Build
+## Step 5: Upload Files & Deploy (1-Click Zip Package)
 
-You can deploy in one of two ways:
+We have created an automated packaging script that compiles both the backend API and Next.js frontend, creating an optimized deployment archive `cpanel_deploy.zip`:
 
-### Option A: Build Locally and Upload (Recommended for Shared Hosting)
-1. On your development machine:
+### 🚀 Recommended: 1-Click Package Deployment
+1. On your development machine, run:
    ```bash
-   npm install
-   npm run build:api
-   npm run build:web
+   npm run package:cpanel
    ```
-2. Upload the project to cPanel (via Git Version Control or cPanel File Manager ZIP upload).
-   *Make sure `apps/api/dist` and `node_modules` (or install dependencies in cPanel) are present.*
-3. On cPanel Node.js App page, click **Run NPM Install** (or run `npm install --omit=dev` in cPanel Terminal).
-4. Click **Start App** (or **Restart**).
+   This generates `cpanel_deploy.zip` (~30 MB) containing:
+   - `app.js` (hardened cPanel entry point)
+   - `.next/` and `next_build/` (pre-compiled production frontend with `BUILD_ID`)
+   - `apps/api/dist/` (compiled Express API server)
+   - `public/` (all images & static assets)
+   - `package.json`, `.htaccess`, and `cpanel_database_setup.sql`
 
-### Option B: Build on cPanel Terminal (If Terminal Access Enabled)
-1. In cPanel, open **Terminal**.
-2. Enter the virtual environment indicated at the top of your Node.js App page (e.g. `source /home/USER/nodevenv/api/20/bin/activate && cd /home/USER/api`).
-3. Run:
-   ```bash
-   npm install
-   npm run build:api
-   ```
-4. Back in the cPanel Node.js App UI, click **Restart**.
+2. In cPanel **File Manager**:
+   - Open your Application Root directory (e.g., `public_html` or `royalmansion`).
+   - Click **Upload** and select `cpanel_deploy.zip`.
+   - Right-click `cpanel_deploy.zip` and select **Extract**.
+   
+3. In cPanel **Setup Node.js App**:
+   - Click **Run NPM Install** (or run `npm install --omit=dev` in terminal).
+   - Click **Restart App**.
+   - Open your website: Your booking engine and full resort website will load live!
 
 ---
 

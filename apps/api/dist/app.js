@@ -42,10 +42,17 @@ function findNextDir() {
         if (fs_1.default.existsSync(path_1.default.join(c, "out", "index.html"))) {
             return { dir: c, type: "export" };
         }
+        // Standard .next directory
         const buildId = path_1.default.join(c, ".next", "BUILD_ID");
         const routesManifest = path_1.default.join(c, ".next", "routes-manifest.json");
         if (fs_1.default.existsSync(buildId) && fs_1.default.existsSync(routesManifest)) {
-            return { dir: c, type: "standalone" };
+            return { dir: c, type: "standalone", distDir: ".next" };
+        }
+        // Non-hidden next_build fallback for cPanel / FTP systems that strip dot-folders
+        const altBuildId = path_1.default.join(c, "next_build", "BUILD_ID");
+        const altRoutesManifest = path_1.default.join(c, "next_build", "routes-manifest.json");
+        if (fs_1.default.existsSync(altBuildId) && fs_1.default.existsSync(altRoutesManifest)) {
+            return { dir: c, type: "standalone", distDir: "next_build" };
         }
     }
     return null;
@@ -107,7 +114,11 @@ function createApp() {
             try {
                 // eslint-disable-next-line @typescript-eslint/no-var-requires
                 const next = require("next");
-                const nextApp = next({ dev: false, dir: frontend.dir });
+                const nextApp = next({
+                    dev: false,
+                    dir: frontend.dir,
+                    conf: frontend.distDir ? { distDir: frontend.distDir } : undefined,
+                });
                 let nextReady = false;
                 let nextInitError = null;
                 const handle = nextApp.getRequestHandler();

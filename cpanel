@@ -1,29 +1,4 @@
-> royal-mansion-resort@0.1.0 start
-> node app.js
-[2026-11-12T06:10:52.188Z] STARTUP EXCEPTION: ZodError: [
-{
-"code": "custom",
-"path": [
-"SESSION_SECRET"
-],
-"message": "SESSION_SECRET must be configured with a secure random string in production."
-},
-{
-"code": "custom",
-"path": [
-"CRON_SECRET"
-],
-"message": "CRON_SECRET must be configured with a secure random string in production."
-}
-]
-at Object.<anonymous> (/app/apps/api/dist/config/env.js:114:25)
-at Module._compile (node:internal/modules/cjs/loader:1781:14)
-at Object..js (node:internal/modules/cjs/loader:1913:10)
-at Module.load (node:internal/modules/cjs/loader:1505:32)
-at Function._load (node:internal/modules/cjs/loader:1309:12)
-at wrapModuleLoad (node:internal/modules/cjs/loader:254:19)
-at Module.require (node:internal/modules/cjs/loader:1527:12)
-at require (node:internal/modules/helpers:147:16)
-at Object.<anonymous> (/app/apps/api/dist/app.js:15:15)
-at Module._compile (node:internal/modules/cjs/loader:1781:14)
-Fallback diagnostic server listening on port/socket: 3000
+Royal Mansion Resort & Villa API Server
+Backend API is active and healthy: /health
+
+Frontend build (.next/BUILD_ID) not detected yet. Run npm run build or deploy frontend static export to complete setup.
