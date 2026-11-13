@@ -249,7 +249,7 @@ export function BookingForm() {
               ))}</div>
             </div>
           )}
-          <label className="flex items-start gap-3 md:col-span-2 cursor-pointer"><input type="checkbox" checked={form.termsAccepted} onChange={(e) => setForm({ ...form, termsAccepted: e.target.checked })} /><span>I agree to the booking terms, cancellation policy, and server-side availability check.</span></label>
+          <label className="flex items-start gap-3 md:col-span-2 cursor-pointer"><input type="checkbox" checked={form.termsAccepted} onChange={(e) => setForm({ ...form, termsAccepted: e.target.checked })} />I agree to the booking terms, cancellation policy.</label>
           <div className="flex flex-col gap-3 sm:flex-row md:col-span-2">
             <button onClick={requestQuote} className="border border-primary px-6 py-4 text-label-lg font-semibold uppercase tracking-widest text-primary transition-colors hover:bg-primary/5">Check Availability</button>
             <button onClick={createHold} className="bg-primary px-6 py-4 text-label-lg font-semibold uppercase tracking-widest text-white transition-opacity hover:opacity-90">Create Hold and Pay</button>
