@@ -50,7 +50,7 @@ export default function Footer() {
           </p>
 
           <div className="pt-2">
-            <h4 className="font-label-lg text-label-lg uppercase tracking-widest text-tertiary-fixed mb-4 text-xs font-semibold">
+            <h4 className="font-label-lg  uppercase tracking-widest text-tertiary-fixed mb-4 text-xs ">
               Connect With Us
             </h4>
             <div className="flex flex-wrap items-center gap-3">
@@ -116,7 +116,7 @@ export default function Footer() {
         */}
 
         <div className="space-y-4 md:pl-10 md:justify-self-end">
-          <h4 className="font-label-lg text-label-lg uppercase tracking-widest text-tertiary-fixed">
+          <h4 className="font-label-lg  uppercase tracking-widest text-tertiary-fixed">
             Contact
           </h4>
           <ul className="space-y-3 text-on-primary/80 font-body-md">
