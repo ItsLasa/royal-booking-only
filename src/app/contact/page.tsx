@@ -235,7 +235,7 @@ export default function ContactPage() {
           </div>
         </div>
         <div className="px-margin-mobile md:px-margin-desktop py-8 border-t border-white/10 flex flex-col md:flex-row justify-between items-center gap-4 max-w-7xl mx-auto">
-          <div className="text-on-primary/60 text-sm">© 2024 Royal Mansion Resort Villa. All Rights Reserved.</div>
+          <div className="text-on-primary/60 text-sm">© 2026 Royal Mansion Resort Villa. All Rights Reserved.</div>
           <div className="flex gap-8 text-sm uppercase tracking-widest text-on-primary/60">
             <span>Interpreting Luxury</span>
             <span>Designed for Peace</span>

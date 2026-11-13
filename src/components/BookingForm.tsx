@@ -1,8 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import toast from "react-hot-toast";
 import { apiGet, apiPost } from "@/lib/api/client";
 import { lkr } from "@/lib/bookingData";
+import Icon from "@/components/Icon";
 
 type PublicPackage = {
   id: string;
@@ -70,6 +72,8 @@ export function BookingForm() {
   const [selectedAddOns, setSelectedAddOns] = useState<Set<string>>(new Set());
   const [quote, setQuote] = useState<Quote | null>(null);
   const [message, setMessage] = useState("");
+  const [isChecking, setIsChecking] = useState(false);
+  const [isHolding, setIsHolding] = useState(false);
 
   const load = useCallback(async () => {
     setLoadState("loading");
@@ -115,13 +119,19 @@ export function BookingForm() {
   }, [addOns]);
 
   const toggleAddOn = useCallback((id: string) => {
+    const addOn = uniqueAddOns.find((item) => item.id === id);
     setSelectedAddOns((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
+      if (next.has(id)) {
+        next.delete(id);
+        if (addOn) toast(`Removed extra: ${addOn.name}`, { icon: "ℹ️" });
+      } else {
+        next.add(id);
+        if (addOn) toast.success(`Added extra: ${addOn.name}`);
+      }
       return next;
     });
-  }, []);
+  }, [uniqueAddOns]);
 
   const selectedAddOnIds = useCallback(() => {
     return [...selectedAddOns]
@@ -133,8 +143,23 @@ export function BookingForm() {
   }, [selectedAddOns, uniqueAddOns]);
 
   async function requestQuote() {
-    if (!form.packageId) return;
+    if (!form.packageId) {
+      toast.error("Please select a package first.");
+      return;
+    }
+    if (!form.checkInDate || !form.checkOutDate) {
+      toast.error("Please select both check-in and check-out dates.");
+      return;
+    }
+    if (new Date(form.checkOutDate) <= new Date(form.checkInDate)) {
+      toast.error("Check-out date must be after check-in date.");
+      return;
+    }
+
+    setIsChecking(true);
     setMessage("Checking live availability and price...");
+    const toastId = toast.loading("Checking live availability and rates...");
+
     // First verify the selected dates are still free against live bookings.
     try {
       await apiPost<{ available: boolean; remaining: number }>("/availability/search", {
@@ -144,7 +169,10 @@ export function BookingForm() {
       });
     } catch (error) {
       setQuote(null);
-      setMessage(error instanceof Error && error.message ? error.message : "These dates are already booked or unavailable. Please choose different dates.");
+      const errMsg = error instanceof Error && error.message ? error.message : "These dates are already booked or unavailable. Please choose different dates.";
+      setMessage(errMsg);
+      toast.error(errMsg, { id: toastId });
+      setIsChecking(false);
       return;
     }
     try {
@@ -159,20 +187,39 @@ export function BookingForm() {
         paymentOption: form.paymentOption,
       });
       setQuote(data);
-      setMessage("Great news — those dates are available. Live quote loaded from the booking service.");
+      const successMsg = "Great news — those dates are available! Live quote..";
+      setMessage(successMsg);
+      toast.success(successMsg, { id: toastId });
     } catch (error) {
       setQuote(null);
-      setMessage(error instanceof Error ? error.message : "Could not load a quote. Please try again.");
+      const errMsg = error instanceof Error ? error.message : "Could not load a quote. Please try again.";
+      setMessage(errMsg);
+      toast.error(errMsg, { id: toastId });
+    } finally {
+      setIsChecking(false);
     }
   }
 
   async function createHold() {
     if (!form.termsAccepted) {
+      toast.error("Please agree to the booking terms and cancellation policy.");
       setMessage("Please accept the booking terms before continuing.");
       return;
     }
-    if (!form.packageId) return;
+    if (!form.firstName.trim() || !form.lastName.trim() || !form.email.trim() || !form.phone.trim()) {
+      toast.error("Please fill in your first name, last name, email, and phone number.");
+      setMessage("Please fill in all guest contact details before submitting.");
+      return;
+    }
+    if (!form.packageId) {
+      toast.error("Please select a package.");
+      return;
+    }
+
+    setIsHolding(true);
     setMessage("Creating a 15 minute booking hold...");
+    const holdToast = toast.loading("Securing your 15-minute booking hold...");
+
     try {
       const data = await apiPost<{ booking: { reference: string } }>("/bookings/hold", {
         packageId: form.packageId,
@@ -193,9 +240,13 @@ export function BookingForm() {
         specialRequests: form.specialRequests,
         termsAccepted: form.termsAccepted,
       });
+      toast.success("Reservation hold secured! Redirecting to payment...", { id: holdToast });
       window.location.href = `/book/payment?reference=${data.booking.reference}`;
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Could not create booking hold. Check API and database setup.");
+      const errMsg = error instanceof Error ? error.message : "Could not create booking hold. Check API and database setup.";
+      setMessage(errMsg);
+      toast.error(errMsg, { id: holdToast });
+      setIsHolding(false);
     }
   }
 
@@ -220,47 +271,161 @@ export function BookingForm() {
   }
 
   return (
-    <section className="mx-auto grid max-w-7xl grid-cols-1 gap-8 px-margin-mobile py-12 md:px-margin-desktop lg:grid-cols-[1.2fr_0.8fr] font-open-sans">
+    <section className="mx-auto grid max-w-7xl grid-cols-1 items-start gap-8 px-margin-mobile py-12 md:px-margin-desktop lg:grid-cols-[1.2fr_0.8fr] font-open-sans">
       <div>
         <p className="mb-4 text-xl font-semibold uppercase tracking-widest text-tertiary">Direct Reservation</p>
         <h1 className="mb-4 text-headline-lg-mobile font-bold text-primary text-[42px]">Book Royal Mansion Resort Villa</h1>
         <p className="mb-8 max-w-2xl text-body-lg text-on-surface-variant">Select dates, guests, add-ons, and payment preference. Final availability and pricing are verified again on the server before payment.</p>
-        <div className="grid gap-5 bg-white p-6 shadow-sm md:grid-cols-2">
-          <label className="grid gap-2 text-primary font-medium">Package<select className="border border-outline-variant p-3 font-normal" value={form.packageId} onChange={(e) => setForm({ ...form, packageId: e.target.value })}>{packages.map((pkg) => <option key={pkg.id} value={pkg.id}>{pkg.name}</option>)}</select></label>
-          <label className="grid gap-2 text-primary font-medium">Payment<select className="border border-outline-variant p-3 font-normal" value={form.paymentOption} onChange={(e) => setForm({ ...form, paymentOption: e.target.value })}><option value="DEPOSIT">Pay 50% deposit</option><option value="FULL">Pay full amount</option></select></label>
-          <label className="grid gap-2 text-primary font-medium">Check-in<input className="border border-outline-variant p-3 font-normal" type="date" value={form.checkInDate} onChange={(e) => setForm({ ...form, checkInDate: e.target.value })} /></label>
-          <label className="grid gap-2 text-primary font-medium">Check-out<input className="border border-outline-variant p-3 font-normal" type="date" value={form.checkOutDate} onChange={(e) => setForm({ ...form, checkOutDate: e.target.value })} /></label>
-          <label className="grid gap-2 text-primary font-medium">Adults<input className="border border-outline-variant p-3 font-normal" type="number" min="1" value={form.adults} onChange={(e) => setForm({ ...form, adults: Number(e.target.value) })} /></label>
-          <label className="grid gap-2 text-primary font-medium">Children<input className="border border-outline-variant p-3 font-normal" type="number" min="0" value={form.children} onChange={(e) => setForm({ ...form, children: Number(e.target.value) })} /></label>
-          <label className="grid gap-2 text-primary font-medium">First name<input className="border border-outline-variant p-3 font-normal" value={form.firstName} onChange={(e) => setForm({ ...form, firstName: e.target.value })} /></label>
-          <label className="grid gap-2 text-primary font-medium">Last name<input className="border border-outline-variant p-3 font-normal" value={form.lastName} onChange={(e) => setForm({ ...form, lastName: e.target.value })} /></label>
-          <label className="grid gap-2 text-primary font-medium">Email<input className="border border-outline-variant p-3 font-normal" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></label>
-          <label className="grid gap-2 text-primary font-medium">Phone<input className="border border-outline-variant p-3 font-normal" type="tel" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></label>
-          <label className="grid gap-2 text-primary font-medium md:col-span-2">Special requests<textarea className="min-h-28 border border-outline-variant p-3 font-normal" value={form.specialRequests} onChange={(e) => setForm({ ...form, specialRequests: e.target.value })} /></label>
-          {uniqueAddOns.length > 0 && (
-            <div className="md:col-span-2">
-              <p className="mb-3 text-label-lg font-semibold uppercase tracking-widest text-primary">Available extras</p>
-              <div className="grid gap-2 sm:grid-cols-2">{uniqueAddOns.map((item) => (
-                <label key={item.id} className="flex items-center gap-3 border border-outline-variant p-3 cursor-pointer">
-                  <input type="checkbox" checked={selectedAddOns.has(item.id)} onChange={() => toggleAddOn(item.id)} />
-                  <span className="flex-1">{item.name}</span>
-                  <span className="text-on-surface-variant font-medium">{lkr(Number(item.price))}</span>
-                </label>
-              ))}</div>
+
+        {/* Step 1: Availability Search Bar & Date Picker */}
+        <div className="border border-outline-variant/60 bg-white p-6 shadow-sm">
+          <div className="mb-4 flex items-center justify-between border-b border-outline-variant/30 pb-3">
+            <div>
+              <span className="text-xs font-semibold uppercase tracking-wider text-tertiary">Step 1</span>
+              <h2 className="text-xl font-bold text-primary">Check Availability & Dates</h2>
             </div>
-          )}
-          <label className="flex items-start gap-3 md:col-span-2 cursor-pointer"><input type="checkbox" checked={form.termsAccepted} onChange={(e) => setForm({ ...form, termsAccepted: e.target.checked })} />I agree to the booking terms, cancellation policy.</label>
-          <div className="flex flex-col gap-3 sm:flex-row md:col-span-2">
-            <button onClick={requestQuote} className="border border-primary px-6 py-4 text-label-lg font-semibold uppercase tracking-widest text-primary transition-colors hover:bg-primary/5">Check Availability</button>
-            <button onClick={createHold} className="bg-primary px-6 py-4 text-label-lg font-semibold uppercase tracking-widest text-white transition-opacity hover:opacity-90">Create Hold and Pay</button>
           </div>
-          {message && <p className="md:col-span-2 text-on-surface-variant" role="status">{message}</p>}
+
+          <div className="grid gap-5 md:grid-cols-2">
+            {/* Location */}
+            <div className="grid gap-2">
+              <span className="text-primary font-medium">Location</span>
+              <div className="flex items-center gap-2 border border-outline-variant bg-surface-container-low px-3 py-3 text-on-surface">
+                <Icon name="location_on" className="text-tertiary text-lg shrink-0" />
+                <span className="text-sm font-medium truncate">Royal Mansion, Pussallawa, Sri Lanka</span>
+              </div>
+            </div>
+
+            {/* Package / Villa Option */}
+            <label className="grid gap-2 text-primary font-medium">
+              Package
+              <select className="border border-outline-variant bg-white p-3 font-normal" value={form.packageId} onChange={(e) => setForm({ ...form, packageId: e.target.value })}>
+                {packages.map((pkg) => <option key={pkg.id} value={pkg.id}>{pkg.name}</option>)}
+              </select>
+            </label>
+
+            {/* Check-in Date */}
+            <label className="grid gap-2 text-primary font-medium">
+              Check-in
+              <input
+                className="border border-outline-variant p-3 font-normal"
+                type="date"
+                value={form.checkInDate}
+                onChange={(e) => {
+                  const newIn = e.target.value;
+                  setForm((prev) => ({ ...prev, checkInDate: newIn }));
+                  if (form.checkOutDate && new Date(form.checkOutDate) <= new Date(newIn)) {
+                    toast.error("Check-out date should be after check-in date", { id: "date-warn" });
+                  }
+                }}
+              />
+            </label>
+
+            {/* Check-out Date */}
+            <label className="grid gap-2 text-primary font-medium">
+              Check-out
+              <input
+                className="border border-outline-variant p-3 font-normal"
+                type="date"
+                value={form.checkOutDate}
+                onChange={(e) => {
+                  const newOut = e.target.value;
+                  setForm((prev) => ({ ...prev, checkOutDate: newOut }));
+                  if (form.checkInDate && new Date(newOut) <= new Date(form.checkInDate)) {
+                    toast.error("Check-out date must be after check-in date", { id: "date-warn" });
+                  }
+                }}
+              />
+            </label>
+
+            {/* Guests */}
+            <label className="grid gap-2 text-primary font-medium">
+              Adults
+              <input className="border border-outline-variant p-3 font-normal" type="number" min="1" value={form.adults} onChange={(e) => setForm({ ...form, adults: Number(e.target.value) })} />
+            </label>
+            <label className="grid gap-2 text-primary font-medium">
+              Children
+              <input className="border border-outline-variant p-3 font-normal" type="number" min="0" value={form.children} onChange={(e) => setForm({ ...form, children: Number(e.target.value) })} />
+            </label>
+
+            {/* Check Availability Action Button */}
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center md:col-span-2 pt-2">
+              <button
+                type="button"
+                onClick={requestQuote}
+                disabled={isChecking}
+                className="border border-primary bg-primary px-8 py-4 text-label-lg font-semibold uppercase tracking-widest text-white transition-opacity hover:opacity-90 disabled:opacity-60"
+              >
+                {isChecking ? "Checking Dates..." : "Check Availability"}
+              </button>
+              {quote && (
+                <span className="text-sm font-semibold text-emerald-800">
+                  ✓ Available for selected dates!
+                </span>
+              )}
+            </div>
+
+            {message && (
+              <p
+                className={`md:col-span-2 p-3 text-sm border ${
+                  quote
+                    ? "border-emerald-200 bg-emerald-50 text-emerald-900"
+                    : message.includes("booked") || message.includes("unavailable") || message.includes("Could not")
+                    ? "border-red-200 bg-red-50 text-red-900"
+                    : "border-outline-variant/60 bg-surface-container-low text-on-surface-variant"
+                }`}
+                role="status"
+              >
+                {message}
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* Step 2: Guest Details & Final Hold */}
+        <div className="mt-8 border border-outline-variant/60 bg-white p-6 shadow-sm">
+          <div className="mb-4 border-b border-outline-variant/30 pb-3">
+            <span className="text-xs font-semibold uppercase tracking-wider text-tertiary">Step 2</span>
+            <h2 className="text-xl font-bold text-primary">Guest Information & Reservation</h2>
+          </div>
+
+          <div className="grid gap-5 md:grid-cols-2">
+            <label className="grid gap-2 text-primary font-medium">First name<input className="border border-outline-variant p-3 font-normal" value={form.firstName} onChange={(e) => setForm({ ...form, firstName: e.target.value })} /></label>
+            <label className="grid gap-2 text-primary font-medium">Last name<input className="border border-outline-variant p-3 font-normal" value={form.lastName} onChange={(e) => setForm({ ...form, lastName: e.target.value })} /></label>
+            <label className="grid gap-2 text-primary font-medium">Email<input className="border border-outline-variant p-3 font-normal" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></label>
+            <label className="grid gap-2 text-primary font-medium">Phone<input className="border border-outline-variant p-3 font-normal" type="tel" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></label>
+            <label className="grid gap-2 text-primary font-medium md:col-span-2">Payment preference<select className="border border-outline-variant p-3 font-normal" value={form.paymentOption} onChange={(e) => setForm({ ...form, paymentOption: e.target.value })}><option value="DEPOSIT">Pay 50% deposit</option><option value="FULL">Pay full amount</option></select></label>
+            <label className="grid gap-2 text-primary font-medium md:col-span-2">Special requests<textarea className="min-h-28 border border-outline-variant p-3 font-normal" value={form.specialRequests} onChange={(e) => setForm({ ...form, specialRequests: e.target.value })} /></label>
+            {uniqueAddOns.length > 0 && (
+              <div className="md:col-span-2">
+                <p className="mb-3 text-label-lg font-semibold uppercase tracking-widest text-primary">Available extras</p>
+                <div className="grid gap-2 sm:grid-cols-2">{uniqueAddOns.map((item) => (
+                  <label key={item.id} className="flex items-center gap-3 border border-outline-variant p-3 cursor-pointer">
+                    <input type="checkbox" checked={selectedAddOns.has(item.id)} onChange={() => toggleAddOn(item.id)} />
+                    <span className="flex-1">{item.name}</span>
+                    <span className="text-on-surface-variant font-medium">{lkr(Number(item.price))}</span>
+                  </label>
+                ))}</div>
+              </div>
+            )}
+            <label className="flex items-start gap-3 md:col-span-2 cursor-pointer"><input type="checkbox" checked={form.termsAccepted} onChange={(e) => setForm({ ...form, termsAccepted: e.target.checked })} />I agree to the booking terms, cancellation policy.</label>
+            <div className="md:col-span-2">
+              <button
+                type="button"
+                onClick={createHold}
+                disabled={isHolding}
+                className="w-full bg-primary px-6 py-4 text-label-lg font-semibold uppercase tracking-widest text-white transition-opacity hover:opacity-90 disabled:opacity-60"
+              >
+                {isHolding ? "Creating Hold..." : "Create Hold and Pay"}
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
 
-      <aside className="lg:sticky lg:top-28">
-        <div className="bg-primary p-8 text-white">
+      <aside className="lg:sticky lg:top-28 lg:self-start h-fit w-full">
+        <div className="bg-primary p-8 text-white shadow-lg">
           <h2 className="mb-6 text-headline-sm font-semibold">Review</h2>
           {quote ? (
             <>

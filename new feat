@@ -1,0 +1,14 @@
+ Second Booking Page section
+
+review details in the Booking Summary using the first page's form booking details.
+
+Add an option to upload a payment slip or transaction confirmation (Image/PDF).
+hide payhere button 
+
+Add a "Book Now" button.
+
+After successful booking submission:
+
+Display popup message: "Your booking has been successfully submitted!"
+
+Automatically send the booking summary to the guest's email.

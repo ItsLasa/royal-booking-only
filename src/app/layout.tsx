@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Fjalla_One, Inter, Mea_Culpa, Open_Sans } from "next/font/google";
 import "./globals.css";
 import LenisWrapper from "@/components/LenisWrapper";
+import ToastProvider from "@/components/ToastProvider";
 
 const fjallaOne = Fjalla_One({
   subsets: ["latin"],
@@ -39,7 +40,8 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={`${fjallaOne.variable} ${meaCulpa.variable} ${inter.variable} ${openSans.variable}`}>
-      <body className="bg-background text-on-surface font-body-md overflow-x-clip">
+      <body className="bg-background text-on-surface font-body-md">
+        <ToastProvider />
         <LenisWrapper>{children}</LenisWrapper>
       </body>
     </html>

@@ -1,5 +1,41 @@
 import Link from "next/link";
 import Icon from "./Icon";
+import {
+  FaFacebookF,
+  FaInstagram,
+  FaWhatsapp,
+
+  FaTiktok,
+
+} from "react-icons/fa";
+
+const socialLinks = [
+  {
+    name: "Facebook",
+    href: "https://www.facebook.com/Royal.Mansion.Resort/",
+    icon: FaFacebookF,
+    ariaLabel: "Royal Mansion Resort on Facebook",
+  },
+  {
+    name: "Instagram",
+    href: "https://www.instagram.com/royal_mansion_resort_pussellaw/",
+    icon: FaInstagram,
+    ariaLabel: "Royal Mansion Resort on Instagram",
+  },
+  {
+    name: "WhatsApp",
+    href: "https://wa.me/94764001245",
+    icon: FaWhatsapp,
+    ariaLabel: "Chat with Royal Mansion Resort on WhatsApp",
+  },
+
+  {
+    name: "TikTok",
+    href: "https://www.tiktok.com/@royal.mansion.res",
+    icon: FaTiktok,
+    ariaLabel: "Royal Mansion Resort on TikTok",
+  },
+];
 
 export default function Footer() {
   return (
@@ -7,12 +43,34 @@ export default function Footer() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-gutter px-margin-mobile md:px-margin-desktop py-section-gap max-w-7xl mx-auto">
         <div className="space-y-6 max-w-md">
           <h3 className="font-headline-lg text-headline-lg text-on-primary">
-            Royal Mansion
+            Royal Mansion Resort Villa
           </h3>
           <p className="text-on-primary/70 leading-relaxed">
-            A premier luxury villa destination in Pussallawa, offering an
-            unmatched mountain living experience for the discerning traveler.
+            A tropical luxury nestled in nature's embrace, where pure tranquility meets modern elegance and timeless charm.
           </p>
+
+          <div className="pt-2">
+            <h4 className="font-label-lg text-label-lg uppercase tracking-widest text-tertiary-fixed mb-4 text-xs font-semibold">
+              Connect With Us
+            </h4>
+            <div className="flex flex-wrap items-center gap-3">
+              {socialLinks.map((social) => {
+                const IconComponent = social.icon;
+                return (
+                  <a
+                    key={social.name}
+                    href={social.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={social.ariaLabel}
+                    className="w-10 h-10 rounded-full border border-white/20 bg-white/5 flex items-center justify-center text-white/80 transition-all duration-300 hover:bg-white hover:text-primary hover:border-white hover:scale-110 shadow-sm"
+                  >
+                    <IconComponent className="text-base" />
+                  </a>
+                );
+              })}
+            </div>
+          </div>
         </div>
 
         {/* Navigation - Commented out per client request
@@ -64,15 +122,17 @@ export default function Footer() {
           <ul className="space-y-3 text-on-primary/80 font-body-md">
             <li className="flex items-start gap-3">
               <Icon name="location_on" className="text-sm mt-1 shrink-0" />
-              <span>Pussallawa, Sri Lanka</span>
+              <span>Royal Mansion Resort Pussallawa,
+                No.21, Prime Panaromic,
+                Paradeka, Pussellawa.</span>
             </li>
             <li className="flex items-center gap-3">
               <Icon name="call" className="text-sm shrink-0" />
-              <span>+94 77 123 4567</span>
+              <span>+94 76 400 1245</span>
             </li>
             <li className="flex items-center gap-3">
               <Icon name="mail" className="text-sm shrink-0" />
-              <span>hello@royalmansion.lk</span>
+              <span>info.royalmationresort@gmail.com</span>
             </li>
           </ul>
         </div>
@@ -99,7 +159,7 @@ export default function Footer() {
         */}
       </div>
       <div className="max-w-7xl mx-auto mt-10 pt-10 border-t border-white/10 flex flex-col md:flex-row justify-between items-center gap-6 text-sm text-on-primary/60 px-margin-mobile md:px-margin-desktop pb-10">
-        <p>© 2024 Royal Mansion Resort Villa. All Rights Reserved.</p>
+        <p>© 2026 Royal Mansion Resort Villa. All Rights Reserved.</p>
         <div className="flex gap-8">
           <a className="hover:text-white transition-colors" href="#">
             Privacy Policy
@@ -107,9 +167,7 @@ export default function Footer() {
           <a className="hover:text-white transition-colors" href="#">
             Terms of Service
           </a>
-          <a className="hover:text-white transition-colors" href="#">
-            Cookies
-          </a>
+
         </div>
       </div>
     </footer>
