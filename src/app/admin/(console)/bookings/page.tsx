@@ -78,10 +78,10 @@ function BookingsListContent() {
                     e.stopPropagation();
                     setPreviewBooking(b);
                   }}
-                  className="inline-flex items-center gap-1 rounded bg-emerald-50 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:text-emerald-300 transition-colors"
+                  className="inline-flex items-center gap-1 rounded bg-emerald-50 px-1.5 py-0.5 text-[10px] font-semibold text-zinc-700 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:text-emerald-300 transition-colors"
                   title="View uploaded bank slip"
                 >
-                  📄 Preview Slip
+                   Preview Slip
                 </button>
               )}
             </div>
