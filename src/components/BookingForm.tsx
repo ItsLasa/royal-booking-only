@@ -118,21 +118,6 @@ export function BookingForm() {
     });
   }, [addOns]);
 
-  const toggleAddOn = useCallback((id: string) => {
-    const addOn = uniqueAddOns.find((item) => item.id === id);
-    setSelectedAddOns((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) {
-        next.delete(id);
-        if (addOn) toast(`Removed extra: ${addOn.name}`, { icon: "ℹ️" });
-      } else {
-        next.add(id);
-        if (addOn) toast.success(`Added extra: ${addOn.name}`);
-      }
-      return next;
-    });
-  }, [uniqueAddOns]);
-
   const selectedAddOnIds = useCallback(() => {
     return [...selectedAddOns]
       .map((id) => {
@@ -141,6 +126,81 @@ export function BookingForm() {
       })
       .filter((entry): entry is { addOnId: string; quantity: number } => entry !== null);
   }, [selectedAddOns, uniqueAddOns]);
+
+  const refreshQuote = useCallback(
+    async (overrideOption?: string, overrideAddOns?: Set<string>) => {
+      const option = overrideOption ?? form.paymentOption;
+      const addOnsSet = overrideAddOns ?? selectedAddOns;
+
+      const addOnIds = [...addOnsSet]
+        .map((id) => {
+          const addOn = uniqueAddOns.find((item) => item.id === id);
+          return addOn ? { addOnId: addOn.id, quantity: 1 } : null;
+        })
+        .filter((entry): entry is { addOnId: string; quantity: number } => entry !== null);
+
+      if (!form.packageId || !form.checkInDate || !form.checkOutDate) return;
+
+      try {
+        const data = await apiPost<Quote>("/quotes", {
+          packageId: form.packageId,
+          checkInDate: form.checkInDate,
+          checkOutDate: form.checkOutDate,
+          adults: Number(form.adults),
+          children: Number(form.children),
+          infants: Number(form.infants),
+          addOns: addOnIds,
+          paymentOption: option,
+        });
+        setQuote(data);
+      } catch {
+        // keep local state
+      }
+    },
+    [form, selectedAddOns, uniqueAddOns]
+  );
+
+  const handlePaymentOptionChange = (newOption: string) => {
+    setForm((prev) => ({ ...prev, paymentOption: newOption }));
+
+    if (quote) {
+      const isFull = newOption === "FULL";
+      const newDeposit = isFull ? quote.grandTotal : Math.round(quote.grandTotal * 0.5);
+      const newBalance = isFull ? 0 : quote.grandTotal - newDeposit;
+
+      setQuote((prev) => (prev ? { ...prev, depositRequired: newDeposit, balanceDue: newBalance } : null));
+
+      toast.success(
+        isFull
+          ? "Payment preference: Pay full amount (100% due now)"
+          : "Payment preference: Pay 50% deposit (balance on arrival)",
+        { id: "payment-pref", duration: 2500 }
+      );
+
+      refreshQuote(newOption);
+    }
+  };
+
+  const toggleAddOn = useCallback(
+    (id: string) => {
+      const addOn = uniqueAddOns.find((item) => item.id === id);
+      setSelectedAddOns((prev) => {
+        const next = new Set(prev);
+        if (next.has(id)) {
+          next.delete(id);
+          if (addOn) toast(`Removed extra: ${addOn.name}`, { icon: "ℹ️" });
+        } else {
+          next.add(id);
+          if (addOn) toast.success(`Added extra: ${addOn.name}`);
+        }
+        if (quote) {
+          refreshQuote(undefined, next);
+        }
+        return next;
+      });
+    },
+    [uniqueAddOns, quote, refreshQuote]
+  );
 
   async function requestQuote() {
     if (!form.packageId) {
@@ -241,6 +301,36 @@ export function BookingForm() {
         termsAccepted: form.termsAccepted,
       });
       toast.success("Reservation hold secured! Redirecting to payment...", { id: holdToast });
+
+      if (typeof window !== "undefined") {
+        const selectedPkg = packages.find((p) => p.id === form.packageId);
+        try {
+          sessionStorage.setItem(
+            `booking_summary_${data.booking.reference}`,
+            JSON.stringify({
+              reference: data.booking.reference,
+              package: selectedPkg ? { name: selectedPkg.name } : null,
+              checkInDate: form.checkInDate,
+              checkOutDate: form.checkOutDate,
+              adults: form.adults,
+              children: form.children,
+              paymentOption: form.paymentOption,
+              guest: {
+                firstName: form.firstName,
+                lastName: form.lastName,
+                email: form.email,
+                phone: form.phone,
+                country: form.country,
+              },
+              specialRequests: form.specialRequests,
+              quote: quote,
+            })
+          );
+        } catch {
+          // ignore session storage quota issues
+        }
+      }
+
       window.location.href = `/book/payment?reference=${data.booking.reference}`;
     } catch (error) {
       const errMsg = error instanceof Error ? error.message : "Could not create booking hold. Check API and database setup.";
@@ -394,7 +484,17 @@ export function BookingForm() {
             <label className="grid gap-2 text-primary font-medium">Last name<input className="border border-outline-variant p-3 font-normal" value={form.lastName} onChange={(e) => setForm({ ...form, lastName: e.target.value })} /></label>
             <label className="grid gap-2 text-primary font-medium">Email<input className="border border-outline-variant p-3 font-normal" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></label>
             <label className="grid gap-2 text-primary font-medium">Phone<input className="border border-outline-variant p-3 font-normal" type="tel" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></label>
-            <label className="grid gap-2 text-primary font-medium md:col-span-2">Payment preference<select className="border border-outline-variant p-3 font-normal" value={form.paymentOption} onChange={(e) => setForm({ ...form, paymentOption: e.target.value })}><option value="DEPOSIT">Pay 50% deposit</option><option value="FULL">Pay full amount</option></select></label>
+            <label className="grid gap-2 text-primary font-medium md:col-span-2">
+              Payment preference
+              <select
+                className="border border-outline-variant p-3 font-normal bg-white"
+                value={form.paymentOption}
+                onChange={(e) => handlePaymentOptionChange(e.target.value)}
+              >
+                <option value="DEPOSIT">Pay 50% deposit</option>
+                <option value="FULL">Pay full amount</option>
+              </select>
+            </label>
             <label className="grid gap-2 text-primary font-medium md:col-span-2">Special requests<textarea className="min-h-28 border border-outline-variant p-3 font-normal" value={form.specialRequests} onChange={(e) => setForm({ ...form, specialRequests: e.target.value })} /></label>
             {uniqueAddOns.length > 0 && (
               <div className="md:col-span-2">
@@ -430,7 +530,20 @@ export function BookingForm() {
           {quote ? (
             <>
               <div className="space-y-4 border-y border-white/20 py-5">{quote.lines.map((line) => <div key={line.description} className="flex justify-between gap-4"><span>{line.description}</span><span>{lkr(line.totalAmount)}</span></div>)}</div>
-              <div className="mt-6 space-y-3 text-lg"><div className="flex justify-between"><span>Total</span><span>{lkr(quote.grandTotal)}</span></div><div className="flex justify-between"><span>Due now</span><span>{lkr(quote.depositRequired)}</span></div><div className="flex justify-between text-white/70"><span>Balance later</span><span>{lkr(quote.balanceDue)}</span></div></div>
+              <div className="mt-6 space-y-3 text-lg">
+                <div className="flex justify-between">
+                  <span>Total</span>
+                  <span>{lkr(quote.grandTotal)}</span>
+                </div>
+                <div className="flex justify-between text-tertiary-fixed font-semibold">
+                  <span>{form.paymentOption === "FULL" ? "Due now (Full Payment)" : "Due now (50% Deposit)"}</span>
+                  <span>{lkr(quote.depositRequired)}</span>
+                </div>
+                <div className="flex justify-between text-white/70">
+                  <span>Balance later</span>
+                  <span>{quote.balanceDue === 0 ? "LKR 0 (Fully Paid)" : lkr(quote.balanceDue)}</span>
+                </div>
+              </div>
             </>
           ) : (
             <p className="border-y border-white/20 py-5 text-sm text-white/80">Select your package, dates, and guests, then press “Check Availability” to see a live quote.</p>

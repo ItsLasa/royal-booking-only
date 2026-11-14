@@ -8,6 +8,7 @@ import type { BookingLite, Paginated } from "@/lib/admin/types";
 import { formatDate, lkr, BOOKING_STATUS_LABELS, PAYMENT_STATUS_LABELS } from "@/lib/admin/format";
 import { DataTable } from "@/components/admin/DataTable";
 import { Button, EmptyState, Input, PageHeader, Pagination, Select, StatusBadge } from "@/components/admin/ui";
+import { BankSlipModal } from "@/components/admin/BankSlipModal";
 
 const STATUSES = ["", "HOLD", "PENDING_PAYMENT", "PAYMENT_PROCESSING", "CONFIRMED", "CANCELLED", "COMPLETED", "NO_SHOW", "EXPIRED"];
 const PAYMENT_STATUSES = ["", "UNPAID", "PARTIALLY_PAID", "PAID", "FAILED", "REFUNDED"];
@@ -24,6 +25,7 @@ function BookingsListContent() {
   const [data, setData] = useState<Paginated<BookingLite> | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [previewBooking, setPreviewBooking] = useState<BookingLite | null>(null);
 
   useEffect(() => setSearch(initialSearch), [initialSearch]);
 
@@ -62,7 +64,30 @@ function BookingsListContent() {
       { header: "Check-out", accessorKey: "checkOutDate", cell: (info) => formatDate(String(info.getValue())) },
       { header: "Nights", accessorKey: "nights", cell: (info) => <span className="text-on-surface-variant dark:text-neutral-400">{String(info.getValue())}</span> },
       { header: "Total Amount", accessorKey: "grandTotal", cell: (info) => <span className="font-normal">{lkr(String(info.getValue()))}</span> },
-      { header: "Payment", accessorKey: "paymentStatus", cell: (info) => <StatusBadge status={String(info.getValue())} /> },
+      {
+        header: "Payment",
+        cell: (info) => {
+          const b = info.row.original;
+          return (
+            <div className="flex flex-col gap-1 items-start">
+              <StatusBadge status={b.paymentStatus} />
+              {b.slipUrl && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setPreviewBooking(b);
+                  }}
+                  className="inline-flex items-center gap-1 rounded bg-emerald-50 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:text-emerald-300 transition-colors"
+                  title="View uploaded bank slip"
+                >
+                  📄 Preview Slip
+                </button>
+              )}
+            </div>
+          );
+        },
+      },
       { header: "Status", accessorKey: "bookingStatus", cell: (info) => <StatusBadge status={String(info.getValue())} /> },
     ],
     [],
@@ -106,6 +131,20 @@ function BookingsListContent() {
           {data && <Pagination page={data.page} pages={data.pages} total={data.total} onChange={setPage} />}
         </div>
       )}
+
+      <BankSlipModal
+        open={Boolean(previewBooking)}
+        onClose={() => setPreviewBooking(null)}
+        slipUrl={previewBooking?.slipUrl}
+        bookingReference={previewBooking?.reference}
+        guestName={
+          previewBooking?.guest
+            ? `${previewBooking.guest.firstName} ${previewBooking.guest.lastName}`.trim()
+            : undefined
+        }
+        amount={previewBooking?.grandTotal}
+        verified={previewBooking?.paymentStatus === "PAID"}
+      />
     </div>
   );
 }

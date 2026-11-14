@@ -25,7 +25,23 @@ const holdLimiter = rateLimit({
   },
 });
 
+// Rate limiter on public status and cancellation requests to prevent enumeration attacks
+const statusLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    error: {
+      code: "RATE_LIMIT_EXCEEDED",
+      message: "Too many status queries. Please try again after a few minutes.",
+    },
+  },
+});
+
 const cancellationSchema = z.object({
+  email: z.string().email("Valid guest email is required").optional(),
   reason: z.string().trim().min(1, "Cancellation reason is required").max(1000, "Reason cannot exceed 1000 characters"),
 });
 
@@ -131,43 +147,58 @@ publicRoutes.post(
   async (req, res, next) => {
     try {
       const hold = await createBookingHold(prisma, req.body);
-      res.status(201).json(ok({ booking: publicBooking(hold.booking), quote: hold.quote }));
+      res.status(201).json(ok({ booking: publicBooking(hold.booking, { unmasked: true }), quote: hold.quote }));
     } catch (e) {
       next(e);
     }
   }
 );
 
-publicRoutes.get("/bookings/:reference/status", async (req, res, next) => {
+publicRoutes.get("/bookings/:reference/status", statusLimiter, async (req, res, next) => {
   try {
     const booking = await prisma.booking.findUnique({
       where: { reference: req.params.reference },
-      include: { package: true, guest: true, priceLines: true, payments: true },
-    });
-    res.json(ok(booking ? publicBooking(booking) : null));
-  } catch (e) {
-    next(e);
-  }
-});
-publicRoutes.post("/bookings/:reference/cancellation-request", validateBody(cancellationSchema), async (req, res, next) => {
-  try {
-    const reference = String(req.params.reference);
-    const booking = await prisma.booking.findUnique({
-      where: { reference },
+      include: { package: true, guest: true, priceLines: true, payments: true, addOns: true },
     });
     if (!booking) {
-      throw new ApiError(404, "BOOKING_NOT_FOUND", "Booking was not found.");
+      return res.json(ok(null));
     }
-    await prisma.auditLog.create({
-      data: {
-        action: "GUEST_CANCELLATION_REQUEST",
-        entityType: "Booking",
-        entityId: booking.reference,
-        newValues: { reason: req.body.reason },
-      },
-    });
-    res.json(ok({ received: true }));
+    const queryEmail = typeof req.query.email === "string" ? req.query.email.trim().toLowerCase() : "";
+    const isOwner = Boolean(queryEmail && booking.guest && queryEmail === booking.guest.email.toLowerCase());
+    res.json(ok(publicBooking(booking, { unmasked: isOwner })));
   } catch (e) {
     next(e);
   }
 });
+
+publicRoutes.post(
+  "/bookings/:reference/cancellation-request",
+  statusLimiter,
+  validateBody(cancellationSchema),
+  async (req, res, next) => {
+    try {
+      const reference = String(req.params.reference);
+      const booking = await prisma.booking.findUnique({
+        where: { reference },
+        include: { guest: true },
+      });
+      if (!booking) {
+        throw new ApiError(404, "BOOKING_NOT_FOUND", "Booking was not found.");
+      }
+      if (req.body.email && booking.guest && req.body.email.trim().toLowerCase() !== booking.guest.email.toLowerCase()) {
+        throw new ApiError(403, "EMAIL_MISMATCH", "Email does not match booking records.");
+      }
+      await prisma.auditLog.create({
+        data: {
+          action: "GUEST_CANCELLATION_REQUEST",
+          entityType: "Booking",
+          entityId: booking.reference,
+          newValues: { reason: req.body.reason, email: req.body.email },
+        },
+      });
+      res.json(ok({ received: true }));
+    } catch (e) {
+      next(e);
+    }
+  }
+);

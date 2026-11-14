@@ -6,10 +6,11 @@ import { toast } from "sonner";
 import { ColumnDef } from "@tanstack/react-table";
 import { adminGet, adminPost } from "@/lib/admin/api";
 import type { AuditLogEntry, Booking, Payment } from "@/lib/admin/types";
-import { formatDate, formatDateTime, lkr, relativeTime, BOOKING_SOURCE_LABELS, humanize } from "@/lib/admin/format";
+import { formatDate, formatDateTime, lkr, relativeTime, BOOKING_SOURCE_LABELS, humanize, getSlipFullUrl } from "@/lib/admin/format";
 import { DataTable } from "@/components/admin/DataTable";
 import { Button, Card, CardBody, CardHeader, EmptyState, PageHeader, Skeleton, StatusBadge, Tabs } from "@/components/admin/ui";
 import { ConfirmDialog } from "@/components/admin/Modal";
+import { BankSlipModal } from "@/components/admin/BankSlipModal";
 
 type Tab = "summary" | "guest" | "payments" | "activity" | "notes";
 
@@ -27,6 +28,8 @@ export default function BookingDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [confirm, setConfirm] = useState<null | { kind: "cancel" | "checkout" | "confirm" }>(null);
+  const [selectedSlipPayment, setSelectedSlipPayment] = useState<Payment | null>(null);
+  const [showBookingSlipModal, setShowBookingSlipModal] = useState(false);
   const [acting, setActing] = useState(false);
 
   const load = () => {
@@ -53,16 +56,64 @@ export default function BookingDetailPage() {
     }
   }
 
+  async function runPaymentVerify(paymentId: string) {
+    setActing(true);
+    try {
+      await adminPost(`/admin/payments/${paymentId}/verify`);
+      toast.success("Payment verified and booking confirmed!");
+      load();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Verification failed");
+    } finally {
+      setActing(false);
+    }
+  }
+
   const paymentColumns = useMemo<ColumnDef<Payment, unknown>[]>(
     () => [
       { header: "Provider", accessorKey: "provider", cell: (info) => <span className="capitalize">{String(info.getValue()).replace("_", " ").toLowerCase()}</span> },
       { header: "Amount", accessorKey: "amount", cell: (info) => <span className="font-normal">{lkr(String(info.getValue()))}</span> },
       { header: "Status", accessorKey: "status", cell: (info) => <StatusBadge status={String(info.getValue())} /> },
-      { header: "Verified", accessorKey: "verified", cell: (info) => (info.getValue() ? "Yes" : "No") },
+      {
+        header: "Bank Slip",
+        cell: (info) => {
+          const p = info.row.original;
+          const slip = p.slipUrl || booking?.slipUrl;
+          if (!slip) return <span className="text-xs text-neutral-400">—</span>;
+          return (
+            <button
+              type="button"
+              onClick={() => setSelectedSlipPayment(p)}
+              className="inline-flex items-center gap-1 rounded bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:text-emerald-300 transition-colors"
+            >
+              👁️ View Slip
+            </button>
+          );
+        },
+      },
+      {
+        header: "Verified",
+        accessorKey: "verified",
+        cell: (info) => (info.getValue() ? <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">✓ Yes</span> : <span className="text-xs font-medium text-amber-600 dark:text-amber-400">No</span>),
+      },
       { header: "Method", accessorKey: "paymentMethod", cell: (info) => String(info.getValue() ?? "—") },
       { header: "Date", accessorKey: "createdAt", cell: (info) => formatDateTime(String(info.getValue())) },
+      {
+        header: "Actions",
+        cell: (info) => {
+          const p = info.row.original;
+          if (p.provider === "BANK_TRANSFER" && !p.verified) {
+            return (
+              <Button size="sm" variant="secondary" onClick={() => runPaymentVerify(p.id)} loading={acting}>
+                Verify Slip
+              </Button>
+            );
+          }
+          return null;
+        },
+      },
     ],
-    [],
+    [booking?.slipUrl, acting],
   );
 
   if (loading) {
@@ -135,6 +186,91 @@ export default function BookingDetailPage() {
       <div className="mt-5">
         {tab === "summary" && (
           <div className="grid gap-6 lg:grid-cols-3">
+            {booking.slipUrl && (
+              <Card className="lg:col-span-3 border-emerald-200/80 bg-emerald-50/20 dark:border-emerald-900/40 dark:bg-emerald-950/10">
+                <CardHeader
+                  title="Uploaded Bank Transfer Payment Slip"
+                  action={
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Button size="sm" variant="outline" onClick={() => setShowBookingSlipModal(true)}>
+                        🔍 Preview Full Slip
+                      </Button>
+                      {booking.paymentStatus !== "PAID" && (
+                        <Button
+                          size="sm"
+                          variant="primary"
+                          onClick={() => {
+                            const unverifiedPayment = booking.payments?.find(
+                              (p) => p.provider === "BANK_TRANSFER" && !p.verified
+                            );
+                            if (unverifiedPayment) {
+                              runPaymentVerify(unverifiedPayment.id);
+                            } else {
+                              runAction("confirm");
+                            }
+                          }}
+                          loading={acting}
+                        >
+                          ✓ Verify Payment Slip
+                        </Button>
+                      )}
+                    </div>
+                  }
+                />
+                <CardBody>
+                  <div className="flex flex-col sm:flex-row gap-5 items-start">
+                    <div
+                      onClick={() => setShowBookingSlipModal(true)}
+                      className="group relative cursor-pointer overflow-hidden rounded-xl border border-outline-variant/60 bg-white shadow-sm dark:border-white/10 dark:bg-black/30 w-full sm:w-64 max-h-56 flex items-center justify-center p-2"
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={getSlipFullUrl(booking.slipUrl)}
+                        alt="Bank transfer slip"
+                        className="max-h-48 w-auto object-contain transition-transform duration-200 group-hover:scale-105"
+                      />
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/45 opacity-0 group-hover:opacity-100 transition-opacity text-white text-xs font-semibold gap-1">
+                        🔍 Click to Zoom / Preview
+                      </div>
+                    </div>
+                    <div className="space-y-2.5 text-xs flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-sm text-on-surface dark:text-white">
+                          Payment Proof Attached by Guest
+                        </span>
+                        {booking.paymentStatus === "PAID" ? (
+                          <span className="rounded bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300">
+                            ✓ Payment Verified
+                          </span>
+                        ) : (
+                          <span className="rounded bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-800 dark:bg-amber-900/60 dark:text-amber-300">
+                            ⏳ Pending Admin Verification
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-on-surface-variant dark:text-neutral-300 leading-relaxed">
+                        The guest uploaded a transaction receipt / bank deposit slip for this booking. Click the preview thumbnail to inspect the document with full zoom and rotation controls.
+                      </p>
+                      <div className="pt-2 flex flex-wrap gap-2">
+                        <Button size="sm" variant="outline" onClick={() => setShowBookingSlipModal(true)}>
+                          Preview & Verify
+                        </Button>
+                        <a
+                          href={getSlipFullUrl(booking.slipUrl)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          download
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-outline-variant/60 bg-white px-3 py-1.5 text-xs font-medium text-on-surface hover:bg-neutral-50 dark:border-white/10 dark:bg-white/5 dark:text-neutral-200 dark:hover:bg-white/10 transition-colors"
+                        >
+                          ↗ Open Original / Download
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                </CardBody>
+              </Card>
+            )}
+
             <Card className="lg:col-span-2">
               <CardHeader title="Stay & Accommodation Details" />
               <CardBody>
@@ -265,6 +401,49 @@ export default function BookingDetailPage() {
         confirmLabel="Confirm Check-Out"
         loading={acting}
         danger={false}
+      />
+
+      {/* Slip Modal from Booking Summary Card */}
+      <BankSlipModal
+        open={showBookingSlipModal}
+        onClose={() => setShowBookingSlipModal(false)}
+        slipUrl={booking.slipUrl}
+        bookingReference={booking.reference}
+        guestName={booking.guest ? `${booking.guest.firstName} ${booking.guest.lastName}`.trim() : undefined}
+        amount={booking.depositRequired || booking.grandTotal}
+        verified={booking.paymentStatus === "PAID"}
+        onVerify={() => {
+          setShowBookingSlipModal(false);
+          const unverifiedPayment = booking.payments?.find(
+            (p) => p.provider === "BANK_TRANSFER" && !p.verified
+          );
+          if (unverifiedPayment) {
+            runPaymentVerify(unverifiedPayment.id);
+          } else {
+            runAction("confirm");
+          }
+        }}
+        verifying={acting}
+      />
+
+      {/* Slip Modal from Payments Table Row */}
+      <BankSlipModal
+        open={Boolean(selectedSlipPayment)}
+        onClose={() => setSelectedSlipPayment(null)}
+        slipUrl={selectedSlipPayment?.slipUrl || booking.slipUrl}
+        bookingReference={booking.reference}
+        guestName={booking.guest ? `${booking.guest.firstName} ${booking.guest.lastName}`.trim() : undefined}
+        amount={selectedSlipPayment?.amount}
+        bankReference={selectedSlipPayment?.bankReference}
+        verified={selectedSlipPayment?.verified}
+        onVerify={() => {
+          if (selectedSlipPayment) {
+            const pId = selectedSlipPayment.id;
+            setSelectedSlipPayment(null);
+            runPaymentVerify(pId);
+          }
+        }}
+        verifying={acting}
       />
     </div>
   );

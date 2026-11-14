@@ -67,15 +67,16 @@ function createApp() {
                 scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
                 styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
                 fontSrc: ["'self'", "https://fonts.gstatic.com", "data:"],
-                imgSrc: ["'self'", "data:", "blob:", "https:"],
+                imgSrc: ["'self'", "data:", "blob:", "https:", "http:"],
                 connectSrc: ["'self'", env_1.env.FRONTEND_URL, env_1.env.API_URL, "https://*.payhere.lk", "https://wa.me"],
-                frameSrc: ["'self'", "https://*.payhere.lk"],
-                objectSrc: ["'none'"],
+                frameSrc: ["'self'", "https://*.payhere.lk", "blob:"],
+                objectSrc: ["'self'", "data:", "blob:"],
                 baseUri: ["'self'"],
                 formAction: ["'self'", "https://*.payhere.lk"],
             },
         },
         crossOriginEmbedderPolicy: false,
+        crossOriginResourcePolicy: { policy: "cross-origin" },
     }));
     app.use((0, cookie_parser_1.default)(env_1.env.SESSION_SECRET));
     app.use((0, pino_http_1.default)({
@@ -86,11 +87,24 @@ function createApp() {
     }));
     // Health check endpoint
     app.get("/health", (_req, res) => res.json({ ok: true }));
+    // Static uploads directory (slips, receipts, documents) with strict sandbox security headers
+    const uploadsDir = path_1.default.resolve(process.cwd(), "public/uploads");
+    if (!fs_1.default.existsSync(uploadsDir)) {
+        fs_1.default.mkdirSync(uploadsDir, { recursive: true });
+    }
+    app.use("/uploads", (0, cors_1.default)({ origin: [env_1.env.FRONTEND_URL, env_1.env.API_URL], credentials: true }), express_1.default.static(uploadsDir, {
+        maxAge: "1d",
+        setHeaders: (res) => {
+            res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+            res.setHeader("X-Content-Type-Options", "nosniff");
+            res.setHeader("Content-Security-Policy", "default-src 'none'; sandbox");
+        },
+    }));
     // API router with CORS, rate limiting, and JSON parsing
     const apiRouter = express_1.default.Router();
     apiRouter.use((0, cors_1.default)({ origin: env_1.env.FRONTEND_URL, credentials: true }));
     apiRouter.use((0, express_rate_limit_1.default)({ windowMs: 60_000, limit: 120 }));
-    apiRouter.use(express_1.default.json({ limit: "256kb" }));
+    apiRouter.use(express_1.default.json({ limit: "15mb" }));
     apiRouter.use(publicRoutes_1.publicRoutes, paymentRoutes_1.paymentRoutes, adminAuthRoutes_1.adminAuthRoutes, adminRoutes_1.adminRoutes, bookingAdminRoutes_1.bookingAdminRoutes, paymentAdminRoutes_1.paymentAdminRoutes, rateAdminRoutes_1.rateAdminRoutes, roomAdminRoutes_1.roomAdminRoutes, housekeepingRoutes_1.housekeepingRoutes, maintenanceRoutes_1.maintenanceRoutes, guestRoutes_1.guestRoutes, reportRoutes_1.reportRoutes, staffRoutes_1.staffRoutes, settingsRoutes_1.settingsRoutes, auditRoutes_1.auditRoutes, cronRoutes_1.cronRoutes, calendarRoutes_1.calendarRoutes);
     apiRouter.use(validation_1.errorHandler);
     app.use("/api/v1", apiRouter);

@@ -165,3 +165,23 @@ export function initials(name?: string | null) {
     .join("")
     .toUpperCase();
 }
+
+export function getSlipFullUrl(url?: string | null): string {
+  if (!url) return "";
+  if (url.startsWith("http://") || url.startsWith("https://") || url.startsWith("data:")) {
+    return url;
+  }
+  const clean = url.startsWith("/") ? url : `/${url}`;
+  if (typeof window !== "undefined") {
+    const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL;
+    if (apiBase && (apiBase.startsWith("http://") || apiBase.startsWith("https://"))) {
+      try {
+        const origin = new URL(apiBase).origin;
+        return `${origin}${clean}`;
+      } catch {
+        // fallback to relative
+      }
+    }
+  }
+  return clean;
+}

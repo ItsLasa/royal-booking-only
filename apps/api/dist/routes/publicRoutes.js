@@ -28,7 +28,22 @@ const holdLimiter = (0, express_rate_limit_1.default)({
         },
     },
 });
+// Rate limiter on public status and cancellation requests to prevent enumeration attacks
+const statusLimiter = (0, express_rate_limit_1.default)({
+    windowMs: 15 * 60 * 1000,
+    limit: 60,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: {
+        success: false,
+        error: {
+            code: "RATE_LIMIT_EXCEEDED",
+            message: "Too many status queries. Please try again after a few minutes.",
+        },
+    },
+});
 const cancellationSchema = zod_1.z.object({
+    email: zod_1.z.string().email("Valid guest email is required").optional(),
     reason: zod_1.z.string().trim().min(1, "Cancellation reason is required").max(1000, "Reason cannot exceed 1000 characters"),
 });
 const bookingHoldBodySchema = pricingService_1.quoteSchema.extend({
@@ -117,39 +132,48 @@ exports.publicRoutes.post("/quotes", (0, validation_1.validateBody)(pricingServi
 exports.publicRoutes.post("/bookings/hold", holdLimiter, (0, validation_1.validateBody)(bookingHoldBodySchema), async (req, res, next) => {
     try {
         const hold = await (0, bookingService_1.createBookingHold)(prisma_1.prisma, req.body);
-        res.status(201).json((0, apiResponse_1.ok)({ booking: (0, bookingService_1.publicBooking)(hold.booking), quote: hold.quote }));
+        res.status(201).json((0, apiResponse_1.ok)({ booking: (0, bookingService_1.publicBooking)(hold.booking, { unmasked: true }), quote: hold.quote }));
     }
     catch (e) {
         next(e);
     }
 });
-exports.publicRoutes.get("/bookings/:reference/status", async (req, res, next) => {
+exports.publicRoutes.get("/bookings/:reference/status", statusLimiter, async (req, res, next) => {
     try {
         const booking = await prisma_1.prisma.booking.findUnique({
             where: { reference: req.params.reference },
-            include: { package: true, guest: true, priceLines: true, payments: true },
+            include: { package: true, guest: true, priceLines: true, payments: true, addOns: true },
         });
-        res.json((0, apiResponse_1.ok)(booking ? (0, bookingService_1.publicBooking)(booking) : null));
+        if (!booking) {
+            return res.json((0, apiResponse_1.ok)(null));
+        }
+        const queryEmail = typeof req.query.email === "string" ? req.query.email.trim().toLowerCase() : "";
+        const isOwner = Boolean(queryEmail && booking.guest && queryEmail === booking.guest.email.toLowerCase());
+        res.json((0, apiResponse_1.ok)((0, bookingService_1.publicBooking)(booking, { unmasked: isOwner })));
     }
     catch (e) {
         next(e);
     }
 });
-exports.publicRoutes.post("/bookings/:reference/cancellation-request", (0, validation_1.validateBody)(cancellationSchema), async (req, res, next) => {
+exports.publicRoutes.post("/bookings/:reference/cancellation-request", statusLimiter, (0, validation_1.validateBody)(cancellationSchema), async (req, res, next) => {
     try {
         const reference = String(req.params.reference);
         const booking = await prisma_1.prisma.booking.findUnique({
             where: { reference },
+            include: { guest: true },
         });
         if (!booking) {
             throw new apiResponse_1.ApiError(404, "BOOKING_NOT_FOUND", "Booking was not found.");
+        }
+        if (req.body.email && booking.guest && req.body.email.trim().toLowerCase() !== booking.guest.email.toLowerCase()) {
+            throw new apiResponse_1.ApiError(403, "EMAIL_MISMATCH", "Email does not match booking records.");
         }
         await prisma_1.prisma.auditLog.create({
             data: {
                 action: "GUEST_CANCELLATION_REQUEST",
                 entityType: "Booking",
                 entityId: booking.reference,
-                newValues: { reason: req.body.reason },
+                newValues: { reason: req.body.reason, email: req.body.email },
             },
         });
         res.json((0, apiResponse_1.ok)({ received: true }));

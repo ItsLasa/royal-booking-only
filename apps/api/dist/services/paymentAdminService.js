@@ -3,6 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.extractSlipInfo = extractSlipInfo;
 exports.listPayments = listPayments;
 exports.getPaymentDetail = getPaymentDetail;
 exports.verifyPayment = verifyPayment;
@@ -10,6 +11,32 @@ exports.recordManualPayment = recordManualPayment;
 exports.refundPayment = refundPayment;
 const decimal_js_1 = __importDefault(require("decimal.js"));
 const apiResponse_1 = require("../lib/apiResponse");
+function extractSlipInfo(payment) {
+    let slipUrl = null;
+    let bankReference = null;
+    if (payment.providerPaymentId && (payment.providerPaymentId.startsWith("/uploads/") || payment.providerPaymentId.startsWith("http"))) {
+        slipUrl = payment.providerPaymentId;
+    }
+    if (payment.providerOrderId) {
+        const raw = String(payment.providerOrderId);
+        const match = raw.match(/\/uploads\/[^\s|]+/);
+        if (match)
+            slipUrl = match[0];
+        if (raw.includes("|")) {
+            const parts = raw.split("|").map((p) => p.trim());
+            bankReference = parts.find((p) => !p.startsWith("/uploads/")) || null;
+        }
+        else if (!raw.startsWith("/uploads/")) {
+            bankReference = raw;
+        }
+    }
+    if (!slipUrl && payment.booking?.internalNotes) {
+        const match = String(payment.booking.internalNotes).match(/\/uploads\/[^\s\)]+/);
+        if (match)
+            slipUrl = match[0];
+    }
+    return { slipUrl, bankReference };
+}
 async function listPayments(prisma, query) {
     const page = Math.max(1, Number(query.page) || 1);
     const pageSize = Math.min(100, Math.max(1, Number(query.pageSize) || 20));
@@ -22,13 +49,26 @@ async function listPayments(prisma, query) {
         prisma.payment.findMany({ where, include: { booking: { include: { guest: true } }, events: true }, orderBy: { createdAt: "desc" }, skip: (page - 1) * pageSize, take: pageSize }),
         prisma.payment.count({ where }),
     ]);
-    return { items, total, page, pageSize, pages: Math.ceil(total / pageSize) };
+    const enrichedItems = items.map((p) => {
+        const { slipUrl, bankReference } = extractSlipInfo(p);
+        return {
+            ...p,
+            slipUrl,
+            bankReference: bankReference || p.paymentMethod || null,
+        };
+    });
+    return { items: enrichedItems, total, page, pageSize, pages: Math.ceil(total / pageSize) };
 }
 async function getPaymentDetail(prisma, id) {
     const payment = await prisma.payment.findUnique({ where: { id }, include: { booking: { include: { guest: true, package: true } }, events: true } });
     if (!payment)
         throw new apiResponse_1.ApiError(404, "PAYMENT_NOT_FOUND", "Payment not found.");
-    return payment;
+    const { slipUrl, bankReference } = extractSlipInfo(payment);
+    return {
+        ...payment,
+        slipUrl,
+        bankReference: bankReference || payment.paymentMethod || null,
+    };
 }
 async function verifyPayment(prisma, actor, id, meta) {
     const payment = await prisma.payment.findUnique({ where: { id }, include: { booking: true } });

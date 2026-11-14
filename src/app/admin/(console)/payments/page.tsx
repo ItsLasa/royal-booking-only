@@ -9,6 +9,7 @@ import { formatDateTime, lkr, PAYMENT_PROVIDER_LABELS, PAYMENT_STATUS_LABELS, hu
 import { DataTable } from "@/components/admin/DataTable";
 import { Button, EmptyState, Field, Input, PageHeader, Pagination, Select, StatusBadge } from "@/components/admin/ui";
 import { ConfirmDialog, Modal } from "@/components/admin/Modal";
+import { BankSlipModal } from "@/components/admin/BankSlipModal";
 
 const STATUSES = ["", "UNPAID", "PARTIALLY_PAID", "PAID", "FAILED", "REFUNDED", "PARTIALLY_REFUNDED", "REFUND_PENDING"];
 const PROVIDERS = ["", "PAYHERE", "BANK_TRANSFER", "CASH"];
@@ -23,6 +24,7 @@ export default function PaymentsPage() {
   const [error, setError] = useState("");
   const [verifyTarget, setVerifyTarget] = useState<Payment | null>(null);
   const [refundTarget, setRefundTarget] = useState<Payment | null>(null);
+  const [previewPayment, setPreviewPayment] = useState<Payment | null>(null);
   const [manualOpen, setManualOpen] = useState(false);
   const [acting, setActing] = useState(false);
 
@@ -102,9 +104,40 @@ export default function PaymentsPage() {
       { header: "Amount Paid", accessorKey: "amount", cell: (info) => <span className="font-normal">{lkr(String(info.getValue()))}</span> },
       { header: "Payment Status", accessorKey: "status", cell: (info) => <StatusBadge status={String(info.getValue())} /> },
       {
-        header: "Bank Slip Status",
-        accessorKey: "verified",
-        cell: (info) => (info.getValue() ? <span className="text-xs font-normal text-emerald-600 dark:text-emerald-400">✓ Verified</span> : <span className="text-xs text-neutral-400">Unverified</span>),
+        header: "Bank Slip",
+        cell: (info) => {
+          const payment = info.row.original;
+          const hasSlip = Boolean(payment.slipUrl);
+          return (
+            <div className="flex flex-col gap-1 items-start">
+              {payment.provider === "BANK_TRANSFER" ? (
+                payment.verified ? (
+                  <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                    ✓ Verified
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-600 dark:text-amber-400">
+                    ⏳ Unverified
+                  </span>
+                )
+              ) : (
+                <span className="text-xs text-neutral-400">—</span>
+              )}
+              {hasSlip && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setPreviewPayment(payment);
+                  }}
+                  className="inline-flex items-center gap-1 rounded bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:text-emerald-300 transition-colors"
+                >
+                  👁️ Preview Slip
+                </button>
+              )}
+            </div>
+          );
+        },
       },
       { header: "Method", accessorKey: "paymentMethod", cell: (info) => String(info.getValue() ?? "—") },
       { header: "Transaction Date", accessorKey: "createdAt", cell: (info) => formatDateTime(String(info.getValue())) },
@@ -112,13 +145,23 @@ export default function PaymentsPage() {
         header: "Actions",
         cell: (info) => {
           const payment = info.row.original;
+          const hasSlip = Boolean(payment.slipUrl);
           return (
-            <div className="flex gap-1.5">
+            <div className="flex items-center gap-1.5">
+              {hasSlip && (
+                <Button size="sm" variant="outline" onClick={() => setPreviewPayment(payment)}>
+                  Preview Slip
+                </Button>
+              )}
               {payment.provider === "BANK_TRANSFER" && !payment.verified && (
-                <Button size="sm" variant="outline" onClick={() => setVerifyTarget(payment)}>Verify Slip</Button>
+                <Button size="sm" variant="secondary" onClick={() => setVerifyTarget(payment)}>
+                  Verify
+                </Button>
               )}
               {payment.verified && payment.status !== "REFUNDED" && (
-                <Button size="sm" variant="ghost" onClick={() => setRefundTarget(payment)}>Issue Refund</Button>
+                <Button size="sm" variant="ghost" onClick={() => setRefundTarget(payment)}>
+                  Issue Refund
+                </Button>
               )}
             </div>
           );
@@ -212,6 +255,28 @@ export default function PaymentsPage() {
           </Field>
         </form>
       </Modal>
+
+      <BankSlipModal
+        open={Boolean(previewPayment)}
+        onClose={() => setPreviewPayment(null)}
+        slipUrl={previewPayment?.slipUrl}
+        bookingReference={previewPayment?.booking?.reference}
+        guestName={
+          previewPayment?.booking?.guest
+            ? `${previewPayment.booking.guest.firstName} ${previewPayment.booking.guest.lastName}`.trim()
+            : undefined
+        }
+        amount={previewPayment?.amount}
+        bankReference={previewPayment?.bankReference}
+        verified={previewPayment?.verified}
+        onVerify={() => {
+          if (previewPayment) {
+            setPreviewPayment(null);
+            verify(previewPayment);
+          }
+        }}
+        verifying={acting}
+      />
     </div>
   );
 }

@@ -12,5 +12,15 @@ function PaymentPanel() {
 }
 
 export default function PaymentPage() {
-  return <><Header /><main className="min-h-screen bg-ivory px-margin-mobile pb-20 pt-36 md:px-margin-desktop"><Suspense fallback={<div className="mx-auto max-w-3xl bg-white p-8">Loading payment...</div>}><PaymentPanel /></Suspense></main><Footer /></>;
+  return (
+    <>
+      <Header />
+      <main className="min-h-screen bg-ivory px-margin-mobile pb-20 pt-36 md:px-margin-desktop">
+        <Suspense fallback={<div className="mx-auto max-w-4xl bg-white p-12 text-center text-primary font-semibold">Loading booking summary...</div>}>
+          <PaymentPanel />
+        </Suspense>
+      </main>
+      <Footer />
+    </>
+  );
 }

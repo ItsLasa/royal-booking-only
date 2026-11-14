@@ -54,14 +54,84 @@ export async function listBookings(prisma: PrismaClient, query: BookingListQuery
     }),
     prisma.booking.count({ where }),
   ]);
-  return { items, total, page, pageSize, pages: Math.ceil(total / pageSize) };
+
+  const enrichedItems = items.map((b: any) => {
+    let slipUrl: string | null = null;
+    if (b.internalNotes) {
+      const match = String(b.internalNotes).match(/\/uploads\/[^\s\)]+/);
+      if (match) slipUrl = match[0];
+    }
+    if (!slipUrl && b.payments?.length) {
+      for (const p of b.payments) {
+        if (p.providerPaymentId && String(p.providerPaymentId).startsWith("/uploads/")) {
+          slipUrl = p.providerPaymentId;
+          break;
+        }
+        if (p.providerOrderId && String(p.providerOrderId).includes("/uploads/")) {
+          const m = String(p.providerOrderId).match(/\/uploads\/[^\s|]+/);
+          if (m) {
+            slipUrl = m[0];
+            break;
+          }
+        }
+      }
+    }
+    return { ...b, slipUrl };
+  });
+
+  return { items: enrichedItems, total, page, pageSize, pages: Math.ceil(total / pageSize) };
 }
 
 export async function getBookingDetail(prisma: PrismaClient, id: string) {
   const booking = await prisma.booking.findUnique({ where: { id }, include: { ...bookingInclude, property: true } });
   if (!booking) throw new ApiError(404, "BOOKING_NOT_FOUND", "Booking not found.");
   const audit = await prisma.auditLog.findMany({ where: { entityType: "Booking", entityId: booking.reference }, include: { adminUser: true }, orderBy: { createdAt: "desc" }, take: 50 });
-  return { ...booking, auditTrail: audit };
+
+  let bookingSlipUrl: string | null = null;
+  if (booking.internalNotes) {
+    const match = String(booking.internalNotes).match(/\/uploads\/[^\s\)]+/);
+    if (match) bookingSlipUrl = match[0];
+  }
+
+  const enrichedPayments = booking.payments.map((p: any) => {
+    let pSlipUrl: string | null = null;
+    let bankReference: string | null = null;
+
+    if (p.providerPaymentId && String(p.providerPaymentId).startsWith("/uploads/")) {
+      pSlipUrl = p.providerPaymentId;
+    }
+    if (p.providerOrderId) {
+      const raw = String(p.providerOrderId);
+      const match = raw.match(/\/uploads\/[^\s|]+/);
+      if (match) pSlipUrl = match[0];
+
+      if (raw.includes("|")) {
+        const parts = raw.split("|").map((x) => x.trim());
+        bankReference = parts.find((x) => !x.startsWith("/uploads/")) || null;
+      } else if (!raw.startsWith("/uploads/")) {
+        bankReference = raw;
+      }
+    }
+    if (!pSlipUrl && bookingSlipUrl) {
+      pSlipUrl = bookingSlipUrl;
+    }
+    if (pSlipUrl && !bookingSlipUrl) {
+      bookingSlipUrl = pSlipUrl;
+    }
+    return { ...p, slipUrl: pSlipUrl, bankReference };
+  });
+
+  if (!bookingSlipUrl && audit.length) {
+    for (const a of audit) {
+      const nv = a.newValues as any;
+      if (nv && typeof nv === "object" && nv.slipUrl) {
+        bookingSlipUrl = nv.slipUrl;
+        break;
+      }
+    }
+  }
+
+  return { ...booking, slipUrl: bookingSlipUrl, payments: enrichedPayments, auditTrail: audit };
 }
 
 export async function createManualBooking(prisma: PrismaClient, actor: AdminActor, input: QuoteInput & { guest: { firstName: string; lastName: string; email: string; phone: string; country?: string; address?: string }; specialRequests?: string; internalNotes?: string; source?: string }, meta?: AuditMeta) {

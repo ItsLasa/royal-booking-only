@@ -64,15 +64,16 @@ export function createApp() {
           scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
           styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
           fontSrc: ["'self'", "https://fonts.gstatic.com", "data:"],
-          imgSrc: ["'self'", "data:", "blob:", "https:"],
+          imgSrc: ["'self'", "data:", "blob:", "https:", "http:"],
           connectSrc: ["'self'", env.FRONTEND_URL, env.API_URL, "https://*.payhere.lk", "https://wa.me"],
-          frameSrc: ["'self'", "https://*.payhere.lk"],
-          objectSrc: ["'none'"],
+          frameSrc: ["'self'", "https://*.payhere.lk", "blob:"],
+          objectSrc: ["'self'", "data:", "blob:"],
           baseUri: ["'self'"],
           formAction: ["'self'", "https://*.payhere.lk"],
         },
       },
       crossOriginEmbedderPolicy: false,
+      crossOriginResourcePolicy: { policy: "cross-origin" },
     })
   );
   app.use(cookieParser(env.SESSION_SECRET));
@@ -89,11 +90,29 @@ export function createApp() {
   // Health check endpoint
   app.get("/health", (_req, res) => res.json({ ok: true }));
 
+  // Static uploads directory (slips, receipts, documents) with strict sandbox security headers
+  const uploadsDir = path.resolve(process.cwd(), "public/uploads");
+  if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir, { recursive: true });
+  }
+  app.use(
+    "/uploads",
+    cors({ origin: [env.FRONTEND_URL, env.API_URL], credentials: true }),
+    express.static(uploadsDir, {
+      maxAge: "1d",
+      setHeaders: (res) => {
+        res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+        res.setHeader("X-Content-Type-Options", "nosniff");
+        res.setHeader("Content-Security-Policy", "default-src 'none'; sandbox");
+      },
+    })
+  );
+
   // API router with CORS, rate limiting, and JSON parsing
   const apiRouter = express.Router();
   apiRouter.use(cors({ origin: env.FRONTEND_URL, credentials: true }));
   apiRouter.use(rateLimit({ windowMs: 60_000, limit: 120 }));
-  apiRouter.use(express.json({ limit: "256kb" }));
+  apiRouter.use(express.json({ limit: "15mb" }));
 
   apiRouter.use(
     publicRoutes,

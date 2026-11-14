@@ -1,0 +1,92 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Booking Summary & Confirmation - RMR-202611-TEST1 | Royal Mansion Resort Villa</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f9f9f9; margin: 0; padding: 20px; color: #1a1c1c; }
+    .container { max-width: 640px; margin: 0 auto; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+    .header { background-color: #061b0e; color: #ffffff; padding: 32px 24px; text-align: center; }
+    .header h1 { margin: 0 0 8px 0; font-size: 24px; letter-spacing: 2px; text-transform: uppercase; }
+    .header p { margin: 0; color: #d0e9d4; font-size: 14px; }
+    .badge { display: inline-block; background: #cba72f; color: #061b0e; font-weight: bold; padding: 6px 14px; border-radius: 20px; font-size: 13px; margin-top: 16px; text-transform: uppercase; letter-spacing: 1px; }
+    .content { padding: 32px 24px; }
+    .greeting { font-size: 18px; font-weight: 600; margin-bottom: 12px; color: #061b0e; }
+    .intro { font-size: 15px; line-height: 1.6; color: #4a5568; margin-bottom: 24px; }
+    .card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 20px; margin-bottom: 24px; }
+    .card-title { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #735c00; margin-bottom: 14px; }
+    .table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    .table td { padding: 8px 0; border-bottom: 1px solid #edf2f7; }
+    .table td:first-child { color: #718096; width: 45%; }
+    .table td:last-child { font-weight: 600; color: #1a202c; text-align: right; }
+    .price-table { width: 100%; border-collapse: collapse; font-size: 14px; margin-top: 8px; }
+    .price-table td { padding: 8px 0; border-bottom: 1px solid #edf2f7; }
+    .price-table .total-row td { border-top: 2px solid #061b0e; border-bottom: none; font-size: 16px; font-weight: bold; color: #061b0e; padding-top: 12px; }
+    .price-table .deposit-row td { color: #735c00; font-weight: 600; }
+    .notice { background: #ecfdf5; border-left: 4px solid #10b981; padding: 14px 18px; margin-bottom: 24px; font-size: 14px; color: #065f46; border-radius: 0 4px 4px 0; }
+    .footer { background: #f1f5f9; padding: 24px; text-align: center; font-size: 13px; color: #64748b; line-height: 1.5; border-top: 1px solid #e2e8f0; }
+    .footer a { color: #061b0e; text-decoration: underline; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Royal Mansion Resort Villa</h1>
+      <p>Pussallawa, Sri Lanka</p>
+      <div class="badge">Booking Ref: RMR-202611-TEST1</div>
+    </div>
+    <div class="content">
+      <div class="greeting">Dear Kamal Perera,</div>
+      <p class="intro">
+        Thank you for reserving your stay at Royal Mansion Resort Villa. Your booking submission has been received successfully! Below is your complete reservation and payment summary.
+      </p>
+
+      <div class="notice">
+        <strong>Booking Submission Received!</strong><br />
+        Our reservations team is verifying your payment slip / transaction confirmation and will finalize your stay details.
+      </div>
+
+      <div class="card">
+        <div class="card-title">Stay & Guest Details</div>
+        <table class="table">
+          <tr><td>Package</td><td>Luxury Villa Package</td></tr>
+          <tr><td>Check-in Date</td><td>1 Dec 2026 (from 14:00)</td></tr>
+          <tr><td>Check-out Date</td><td>3 Dec 2026 (until 11:00)</td></tr>
+          <tr><td>Duration</td><td>2 Nights</td></tr>
+          <tr><td>Guests</td><td>2 Adults</td></tr>
+          <tr><td>Guest Email</td><td>kamal@example.test</td></tr>
+          <tr><td>Guest Phone</td><td>+94771234567</td></tr>
+          
+          
+        </table>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Booking Price Breakdown</div>
+        <table class="price-table">
+          <tr><td>2 Nights Accommodation</td><td style="text-align: right;">LKR 50,000.00</td></tr>
+          <tr class="total-row"><td>Grand Total</td><td style="text-align: right;">LKR 50,000.00</td></tr>
+          <tr class="deposit-row"><td>Deposit Required / Paid</td><td style="text-align: right;">LKR 25,000.00</td></tr>
+          <tr><td>Balance Due on Arrival</td><td style="text-align: right;">LKR 25,000.00</td></tr>
+        </table>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Resort Location & Contact</div>
+        <p style="margin: 0; font-size: 14px; color: #334155; line-height: 1.6;">
+          <strong>Royal Mansion Resort Villa</strong><br />
+          No.21, Prime Panoramic, Paradeka, Pussallawa, Sri Lanka<br />
+          Phone / WhatsApp: +94 76 400 1245<br />
+          Email: info.royalmationresort@gmail.com
+        </p>
+      </div>
+    </div>
+    <div class="footer">
+      <p>© 2026 Royal Mansion Resort Villa. All rights reserved.</p>
+      <p>Have questions? Email us directly at <a href="mailto:info.royalmationresort@gmail.com">info.royalmationresort@gmail.com</a> or call +94 76 400 1245.</p>
+    </div>
+  </div>
+</body>
+</html>
+    

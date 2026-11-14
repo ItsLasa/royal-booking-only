@@ -5,6 +5,35 @@ import { writeAudit, AdminActor, AuditMeta } from "../lib/audit";
 
 export type PaymentListQuery = { page?: number; pageSize?: number; status?: string; provider?: string; search?: string };
 
+export function extractSlipInfo(payment: any): { slipUrl: string | null; bankReference: string | null } {
+  let slipUrl: string | null = null;
+  let bankReference: string | null = null;
+
+  if (payment.providerPaymentId && (payment.providerPaymentId.startsWith("/uploads/") || payment.providerPaymentId.startsWith("http"))) {
+    slipUrl = payment.providerPaymentId;
+  }
+
+  if (payment.providerOrderId) {
+    const raw = String(payment.providerOrderId);
+    const match = raw.match(/\/uploads\/[^\s|]+/);
+    if (match) slipUrl = match[0];
+
+    if (raw.includes("|")) {
+      const parts = raw.split("|").map((p: string) => p.trim());
+      bankReference = parts.find((p: string) => !p.startsWith("/uploads/")) || null;
+    } else if (!raw.startsWith("/uploads/")) {
+      bankReference = raw;
+    }
+  }
+
+  if (!slipUrl && payment.booking?.internalNotes) {
+    const match = String(payment.booking.internalNotes).match(/\/uploads\/[^\s\)]+/);
+    if (match) slipUrl = match[0];
+  }
+
+  return { slipUrl, bankReference };
+}
+
 export async function listPayments(prisma: PrismaClient, query: PaymentListQuery) {
   const page = Math.max(1, Number(query.page) || 1);
   const pageSize = Math.min(100, Math.max(1, Number(query.pageSize) || 20));
@@ -17,13 +46,26 @@ export async function listPayments(prisma: PrismaClient, query: PaymentListQuery
     prisma.payment.findMany({ where, include: { booking: { include: { guest: true } }, events: true }, orderBy: { createdAt: "desc" }, skip: (page - 1) * pageSize, take: pageSize }),
     prisma.payment.count({ where }),
   ]);
-  return { items, total, page, pageSize, pages: Math.ceil(total / pageSize) };
+  const enrichedItems = items.map((p) => {
+    const { slipUrl, bankReference } = extractSlipInfo(p);
+    return {
+      ...p,
+      slipUrl,
+      bankReference: bankReference || p.paymentMethod || null,
+    };
+  });
+  return { items: enrichedItems, total, page, pageSize, pages: Math.ceil(total / pageSize) };
 }
 
 export async function getPaymentDetail(prisma: PrismaClient, id: string) {
   const payment = await prisma.payment.findUnique({ where: { id }, include: { booking: { include: { guest: true, package: true } }, events: true } });
   if (!payment) throw new ApiError(404, "PAYMENT_NOT_FOUND", "Payment not found.");
-  return payment;
+  const { slipUrl, bankReference } = extractSlipInfo(payment);
+  return {
+    ...payment,
+    slipUrl,
+    bankReference: bankReference || payment.paymentMethod || null,
+  };
 }
 
 export async function verifyPayment(prisma: PrismaClient, actor: AdminActor, id: string, meta?: AuditMeta) {

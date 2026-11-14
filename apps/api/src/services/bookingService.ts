@@ -93,7 +93,77 @@ export async function createBookingHold(prisma: PrismaClient, input: HoldInput) 
   throw new ApiError(409, "DATES_UNAVAILABLE", "The selected dates are no longer available.");
 }
 
-export function publicBooking(booking: any) {
-  return { reference: booking.reference, status: booking.bookingStatus, paymentStatus: booking.paymentStatus, checkInDate: booking.checkInDate, checkOutDate: booking.checkOutDate, nights: booking.nights, guests: { adults: booking.adults, children: booking.children, infants: booking.infants }, totals: { grandTotal: Number(booking.grandTotal), depositRequired: Number(booking.depositRequired), amountPaid: Number(booking.amountPaid), balanceDue: Number(booking.balanceDue), currency: booking.currency }, expiresAt: booking.expiresAt };
+function maskEmail(email?: string | null): string {
+  if (!email) return "";
+  const parts = email.split("@");
+  if (parts.length !== 2) return "***";
+  const name = parts[0];
+  const domain = parts[1];
+  const maskedName = name.length <= 2 ? name[0] + "***" : name[0] + "***" + name[name.length - 1];
+  return `${maskedName}@${domain}`;
+}
+
+function maskPhone(phone?: string | null): string {
+  if (!phone) return "";
+  if (phone.length <= 4) return "****";
+  return phone.slice(0, 3) + "***" + phone.slice(-2);
+}
+
+export function publicBooking(booking: any, options: { unmasked?: boolean } = {}) {
+  const isUnmasked = options.unmasked === true;
+
+  return {
+    reference: booking.reference,
+    status: booking.bookingStatus,
+    paymentStatus: booking.paymentStatus,
+    checkInDate: booking.checkInDate,
+    checkOutDate: booking.checkOutDate,
+    nights: booking.nights,
+    guests: { adults: booking.adults, children: booking.children, infants: booking.infants },
+    totals: {
+      grandTotal: Number(booking.grandTotal),
+      depositRequired: Number(booking.depositRequired),
+      amountPaid: Number(booking.amountPaid),
+      balanceDue: Number(booking.balanceDue),
+      currency: booking.currency,
+    },
+    expiresAt: booking.expiresAt,
+    guest: booking.guest
+      ? {
+          firstName: booking.guest.firstName,
+          lastName: isUnmasked
+            ? booking.guest.lastName
+            : (booking.guest.lastName ? `${booking.guest.lastName.charAt(0)}***` : ""),
+          email: isUnmasked ? booking.guest.email : maskEmail(booking.guest.email),
+          phone: isUnmasked ? booking.guest.phone : maskPhone(booking.guest.phone),
+          country: isUnmasked ? booking.guest.country : (booking.guest.country ? "***" : null),
+        }
+      : null,
+    package: booking.package
+      ? {
+          id: booking.package.id,
+          name: booking.package.name,
+          shortDescription: booking.package.shortDescription,
+        }
+      : null,
+    paymentOption: booking.paymentOption,
+    specialRequests: isUnmasked ? booking.specialRequests : undefined,
+    priceLines: booking.priceLines
+      ? booking.priceLines.map((l: any) => ({
+          description: l.description,
+          totalAmount: Number(l.totalAmount),
+          unitAmount: Number(l.unitAmount),
+          quantity: l.quantity,
+          type: l.type,
+        }))
+      : [],
+    addOns: booking.addOns
+      ? booking.addOns.map((a: any) => ({
+          name: a.nameSnapshot,
+          quantity: a.quantity,
+          total: Number(a.total),
+        }))
+      : [],
+  };
 }
 

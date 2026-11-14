@@ -112,6 +112,8 @@ export type Payment = {
   createdAt: string;
   booking?: BookingLite;
   events?: PaymentEvent[];
+  slipUrl?: string | null;
+  bankReference?: string | null;
 };
 
 export type PaymentEvent = {
@@ -138,6 +140,7 @@ export type BookingLite = {
   unit?: { id: string; name: string } | null;
   createdAt?: string;
   internalNotes?: string | null;
+  slipUrl?: string | null;
 };
 
 export type Booking = BookingLite & {
