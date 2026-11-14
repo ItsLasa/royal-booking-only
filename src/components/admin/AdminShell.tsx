@@ -6,7 +6,7 @@ import { createContext, ReactNode, useContext, useEffect, useMemo, useState } fr
 import { cn } from "@/lib/cn";
 import { adminGet, adminPost } from "@/lib/admin/api";
 import type { AdminUser } from "@/lib/admin/types";
-import { Toaster } from "sonner";
+import { Toaster, toast } from "sonner";
 import {
   HiOutlineHome,
   HiOutlineCalendar,
@@ -28,9 +28,37 @@ import {
   HiOutlineMagnifyingGlass,
   HiBars3,
   HiOutlineXMark,
+  HiOutlineLockClosed,
 } from "react-icons/hi2";
 
-const NAV = [
+export const RESTRICTED_ROUTES = [
+  "/admin/rates",
+  "/admin/packages",
+  "/admin/add-ons",
+  "/admin/staff",
+  "/admin/settings",
+  "/admin/audit",
+];
+
+export function isManagerOrOwner(user?: AdminUser | null): boolean {
+  if (!user) return false;
+  return user.role === "OWNER" || user.role === "MANAGER";
+}
+
+export type NavItem = {
+  href: string;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  exact?: boolean;
+  restricted?: boolean;
+};
+
+export type NavGroup = {
+  section: string;
+  items: NavItem[];
+};
+
+const NAV: NavGroup[] = [
   { section: "Operations", items: [
     { href: "/admin", label: "Dashboard", icon: HiOutlineHome, exact: true },
     { href: "/admin/bookings", label: "Reservations", icon: HiOutlineCalendar },
@@ -39,9 +67,9 @@ const NAV = [
     { href: "/admin/rooms", label: "Rooms & Units", icon: HiOutlineHomeModern },
   ]},
   { section: "Commerce", items: [
-    { href: "/admin/rates", label: "Rates & Pricing", icon: HiOutlineTag },
-    { href: "/admin/packages", label: "Stay Packages", icon: HiOutlineSparkles },
-    { href: "/admin/add-ons", label: "Extras & Add-ons", icon: HiOutlineSquaresPlus },
+    { href: "/admin/rates", label: "Rates & Pricing", icon: HiOutlineTag, restricted: true },
+    { href: "/admin/packages", label: "Stay Packages", icon: HiOutlineSparkles, restricted: true },
+    { href: "/admin/add-ons", label: "Extras & Add-ons", icon: HiOutlineSquaresPlus, restricted: true },
     { href: "/admin/payments", label: "Payments & Billing", icon: HiOutlineCreditCard },
   ]},
   { section: "Property", items: [
@@ -50,9 +78,9 @@ const NAV = [
     { href: "/admin/reports", label: "Reports & Analytics", icon: HiOutlineChartBar },
   ]},
   { section: "Administration", items: [
-    { href: "/admin/staff", label: "Staff Accounts", icon: HiOutlineUsers },
-    { href: "/admin/settings", label: "Resort Settings", icon: HiOutlineCog6Tooth },
-    { href: "/admin/audit", label: "Activity & Audit Trail", icon: HiOutlineClipboardDocumentList },
+    { href: "/admin/staff", label: "Staff Accounts", icon: HiOutlineUsers, restricted: true },
+    { href: "/admin/settings", label: "Resort Settings", icon: HiOutlineCog6Tooth, restricted: true },
+    { href: "/admin/audit", label: "Activity & Audit Trail", icon: HiOutlineClipboardDocumentList, restricted: true },
   ]},
 ];
 
@@ -85,6 +113,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
+  const [restrictedModal, setRestrictedModal] = useState<{ open: boolean; title: string } | null>(null);
   const pathname = usePathname();
   const router = useRouter();
   const { theme, toggle } = useTheme();
@@ -111,14 +140,65 @@ export function AdminShell({ children }: { children: ReactNode }) {
 
   const isActive = (href: string, exact?: boolean) => (exact ? pathname === href : pathname.startsWith(href));
 
+  const isCurrentRouteRestricted = useMemo(() => {
+    return RESTRICTED_ROUTES.some((r) => pathname === r || pathname.startsWith(`${r}/`));
+  }, [pathname]);
+
+  const hasAccessToCurrentRoute = useMemo(() => {
+    if (!isCurrentRouteRestricted) return true;
+    return isManagerOrOwner(user);
+  }, [isCurrentRouteRestricted, user]);
+
+  const handleRestrictedAccessNotice = (title: string) => {
+    toast.error("Allow only Admin and Manager", {
+      description: `Access to "${title}" is permitted only for Resort Administrators and Managers.`,
+    });
+    setRestrictedModal({ open: true, title });
+  };
+
   return (
     <SessionContext.Provider value={{ user, loading, refresh, logout }}>
       <div className="min-h-screen bg-[#f4f5f2] text-on-surface dark:bg-[#0b0f13] dark:text-neutral-100">
         <Toaster position="top-right" richColors theme={theme} />
 
+        {/* Access Denied Modal Alert */}
+        {restrictedModal?.open && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setRestrictedModal(null)} />
+            <div className="relative z-10 w-full max-w-md rounded-2xl border border-outline-variant/60 bg-white p-6 shadow-2xl dark:border-white/10 dark:bg-[#12171c]">
+              <div className="flex items-center gap-3">
+                
+                <div>
+                  <h3 className="text-base font-bold text-on-surface dark:text-white">Access Restricted</h3>
+                  <p className="text-xs font-semibold text-red-600 dark:text-red-400">
+                    Allow only Admin and Manager
+                  </p>
+                </div>
+              </div>
+              <p className="mt-4 text-sm text-on-surface-variant dark:text-neutral-300">
+                The section <strong>&ldquo;{restrictedModal.title}&rdquo;</strong> is restricted. Your current account role is{" "}
+                <span className="font-semibold text-amber-700 dark:text-amber-400">{user?.role ?? "Guest"}</span>, which does not have permission to view or manage this area.
+              </p>
+              <div className="mt-6 flex justify-end">
+                <button
+                  onClick={() => setRestrictedModal(null)}
+                  className="rounded-lg bg-[#061b0e] px-4 py-2 text-sm font-medium text-white hover:bg-[#0a2f19] dark:bg-emerald-600 dark:hover:bg-emerald-700"
+                >
+                  Understand & Close
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Desktop sidebar */}
         <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 flex-col border-r border-outline-variant/40 bg-[#0d1a12] text-white lg:flex dark:bg-[#0a0f14] dark:border-white/10">
-          <SidebarContent pathname={pathname} isActive={isActive} />
+          <SidebarContent
+            pathname={pathname}
+            isActive={isActive}
+            user={user}
+            onRestrictedClick={handleRestrictedAccessNotice}
+          />
         </aside>
 
         {/* Mobile sidebar */}
@@ -132,7 +212,13 @@ export function AdminShell({ children }: { children: ReactNode }) {
                   <HiOutlineXMark className="h-5 w-5" />
                 </button>
               </div>
-              <SidebarContent pathname={pathname} isActive={isActive} onNavigate={() => setSidebarOpen(false)} />
+              <SidebarContent
+                pathname={pathname}
+                isActive={isActive}
+                user={user}
+                onNavigate={() => setSidebarOpen(false)}
+                onRestrictedClick={handleRestrictedAccessNotice}
+              />
             </aside>
           </div>
         )}
@@ -187,13 +273,35 @@ export function AdminShell({ children }: { children: ReactNode }) {
                   </span>
                 </button>
                 {menuOpen && (
-                  <div className="absolute right-0 top-12 w-56 rounded-xl border border-outline-variant/50 bg-white p-1.5 shadow-xl dark:border-white/10 dark:bg-[#12171c]">
+                  <div className="absolute right-0 top-12 w-60 rounded-xl border border-outline-variant/50 bg-white p-1.5 shadow-xl dark:border-white/10 dark:bg-[#12171c]">
                     <div className="border-b border-outline-variant/40 px-3 py-2.5 dark:border-white/10">
-                      <p className="text-sm font-normal">{user?.name}</p>
+                      <p className="text-sm font-medium">{user?.name}</p>
                       <p className="text-xs text-on-surface-variant dark:text-neutral-400">{user?.email}</p>
+                      <span className="mt-1 inline-block rounded bg-surface-container px-2 py-0.5 text-[10px] font-semibold text-primary dark:bg-white/10 dark:text-emerald-300">
+                        Role: {user?.role ?? "Guest"}
+                      </span>
                     </div>
-                    <Link href="/admin/settings" onClick={() => setMenuOpen(false)} className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-surface-container dark:hover:bg-white/10">
-                      <HiOutlineCog6Tooth className="h-4 w-4" /> Resort Settings
+                    <Link
+                      href="/admin/settings"
+                      onClick={(e) => {
+                        if (!isManagerOrOwner(user)) {
+                          e.preventDefault();
+                          setMenuOpen(false);
+                          handleRestrictedAccessNotice("Resort Settings");
+                          return;
+                        }
+                        setMenuOpen(false);
+                      }}
+                      className="flex items-center justify-between rounded-lg px-3 py-2 text-sm hover:bg-surface-container dark:hover:bg-white/10"
+                    >
+                      <span className="flex items-center gap-2">
+                        <HiOutlineCog6Tooth className="h-4 w-4" /> Resort Settings
+                      </span>
+                      {!isManagerOrOwner(user) && (
+                        <span className="flex items-center gap-1 rounded bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-medium text-amber-600 dark:text-amber-400">
+                          <HiOutlineLockClosed className="h-3 w-3" /> Admin
+                        </span>
+                      )}
                     </Link>
                     <button onClick={logout} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-error hover:bg-error/5 dark:hover:bg-rose-500/10">
                       <HiOutlineArrowRightOnRectangle className="h-4 w-4" /> Sign Out
@@ -205,7 +313,17 @@ export function AdminShell({ children }: { children: ReactNode }) {
           </header>
 
           <main className="flex-1 px-4 py-6 md:px-6 md:py-8">
-            <div className="mx-auto max-w-[1400px]">{children}</div>
+            <div className="mx-auto max-w-[1400px]">
+              {!loading && user && !hasAccessToCurrentRoute ? (
+                <RestrictedRouteScreen
+                  user={user}
+                  pathname={pathname}
+                  onReturn={() => router.push("/admin")}
+                />
+              ) : (
+                children
+              )}
+            </div>
           </main>
         </div>
       </div>
@@ -224,7 +342,64 @@ function Brand() {
   );
 }
 
-function SidebarContent({ pathname, isActive, onNavigate }: { pathname: string; isActive: (href: string, exact?: boolean) => boolean; onNavigate?: () => void }) {
+function RestrictedRouteScreen({
+  user,
+  pathname,
+  onReturn,
+}: {
+  user: AdminUser;
+  pathname: string;
+  onReturn: () => void;
+}) {
+  const matchingItem = NAV.flatMap((g) => g.items).find((i) => pathname === i.href || pathname.startsWith(`${i.href}/`));
+  const sectionName = matchingItem?.label ?? "this section";
+
+  return (
+    <div className="mx-auto my-12 max-w-xl rounded-2xl border border-outline-variant/60 bg-white p-8 sm:p-12 text-center shadow-xl dark:border-white/10 dark:bg-[#12171c]">
+      
+      <span className="inline-block rounded-full bg-red-100 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-red-700 dark:bg-red-950/60 dark:text-red-300">
+        Access Restricted
+      </span>
+      <h2 className="mt-3 text-2xl font-bold text-on-surface dark:text-white">
+        Allow only Admin and Manager
+      </h2>
+      <p className="mt-3 text-sm text-on-surface-variant dark:text-neutral-400 leading-relaxed">
+        You do not have permission to access <strong>{sectionName}</strong>. This administrative feature is reserved exclusively for resort <strong>Owners</strong> and <strong>Managers</strong>.
+      </p>
+      <div className="mt-5 rounded-lg border border-outline-variant/40 bg-surface-container/40 p-3.5 text-xs text-neutral-600 dark:border-white/5 dark:bg-white/5 dark:text-neutral-300">
+        Currently logged in as: <span className="font-semibold text-neutral-900 dark:text-white">{user.name}</span> (<span className="font-medium text-amber-700 dark:text-amber-400">{user.role}</span>)
+      </div>
+      <div className="mt-8 flex flex-col sm:flex-row justify-center gap-3">
+        <button
+          onClick={onReturn}
+          className="rounded-lg bg-[#061b0e] px-5 py-2.5 text-sm font-medium text-white shadow hover:bg-[#0a2f19] dark:bg-emerald-600 dark:hover:bg-emerald-700 transition-colors"
+        >
+          Return to Dashboard
+        </button>
+        <Link
+          href="/admin/bookings"
+          className="rounded-lg border border-outline-variant/60 bg-white px-5 py-2.5 text-sm font-medium text-on-surface hover:bg-surface-container dark:border-white/10 dark:bg-white/5 dark:text-white dark:hover:bg-white/10 transition-colors"
+        >
+          View Reservations
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+function SidebarContent({
+  pathname,
+  isActive,
+  user,
+  onNavigate,
+  onRestrictedClick,
+}: {
+  pathname: string;
+  isActive: (href: string, exact?: boolean) => boolean;
+  user: AdminUser | null;
+  onNavigate?: () => void;
+  onRestrictedClick: (title: string) => void;
+}) {
   return (
     <>
       <Brand />
@@ -235,18 +410,42 @@ function SidebarContent({ pathname, isActive, onNavigate }: { pathname: string; 
             <div className="space-y-0.5">
               {group.items.map((item) => {
                 const active = isActive(item.href, item.exact);
+                const isRestrictedForUser = item.restricted && !isManagerOrOwner(user);
+
                 return (
                   <Link
                     key={item.href}
                     href={item.href}
-                    onClick={onNavigate}
+                    onClick={(e) => {
+                      if (isRestrictedForUser) {
+                        e.preventDefault();
+                        onRestrictedClick(item.label);
+                        return;
+                      }
+                      onNavigate?.();
+                    }}
                     className={cn(
-                      "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-normal transition-all",
-                      active ? "bg-emerald-500/15 text-emerald-200 ring-1 ring-inset ring-emerald-400/30" : "text-neutral-300/80 hover:bg-white/5 hover:text-white",
+                      "flex items-center justify-between rounded-lg px-3 py-2 text-sm font-normal transition-all",
+                      active
+                        ? "bg-emerald-500/15 text-emerald-200 ring-1 ring-inset ring-emerald-400/30"
+                        : isRestrictedForUser
+                        ? "text-neutral-400/60 hover:bg-white/5 hover:text-neutral-200 cursor-pointer"
+                        : "text-neutral-300/80 hover:bg-white/5 hover:text-white",
                     )}
                   >
-                    <item.icon className={cn("h-[18px] w-[18px]", active ? "text-emerald-300" : "text-neutral-400")} />
-                    {item.label}
+                    <div className="flex items-center gap-3 truncate">
+                      <item.icon className={cn("h-[18px] w-[18px] flex-shrink-0", active ? "text-emerald-300" : "text-neutral-400")} />
+                      <span className="truncate">{item.label}</span>
+                    </div>
+                    {isRestrictedForUser && (
+                      <span
+                        title="Restricted: Allowed only for Admin and Manager"
+                        className="flex items-center gap-1 rounded bg-white/10 px-1.5 py-0.5 text-[10px] font-medium text-amber-300/90"
+                      >
+                        <HiOutlineLockClosed className="h-3 w-3" />
+                        <span className="hidden sm:inline">Admin</span>
+                      </span>
+                    )}
                   </Link>
                 );
               })}

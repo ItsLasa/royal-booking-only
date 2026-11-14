@@ -9,7 +9,7 @@ import { auditMetaFrom } from "../lib/audit";
 import { bulkApplyOverrides, bulkUpdatePackageRates, createSeasonalRate, deleteOverride, deleteSeasonalRate, listAllRates, listRatesForPackage, updateSeasonalRate } from "../services/rateManagerService";
 
 export const rateAdminRoutes = Router();
-rateAdminRoutes.use(requireAdmin);
+rateAdminRoutes.use(requireAdmin, requireRole(["OWNER", "MANAGER"]));
 
 rateAdminRoutes.get("/admin/rates", asyncHandler(async (_req, res) => {
   res.json(ok(await listAllRates(prisma)));

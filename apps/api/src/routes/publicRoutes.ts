@@ -156,8 +156,9 @@ publicRoutes.post(
 
 publicRoutes.get("/bookings/:reference/status", statusLimiter, async (req, res, next) => {
   try {
+    const reference = String(req.params.reference);
     const booking = await prisma.booking.findUnique({
-      where: { reference: req.params.reference },
+      where: { reference },
       include: { package: true, guest: true, priceLines: true, payments: true, addOns: true },
     });
     if (!booking) {
@@ -181,7 +182,7 @@ publicRoutes.post(
       const booking = await prisma.booking.findUnique({
         where: { reference },
         include: { guest: true },
-      });
+      }) as any;
       if (!booking) {
         throw new ApiError(404, "BOOKING_NOT_FOUND", "Booking was not found.");
       }

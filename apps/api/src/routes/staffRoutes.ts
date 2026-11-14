@@ -9,7 +9,7 @@ import { auditMetaFrom } from "../lib/audit";
 import { createStaff, listStaff, resetStaffPassword, updateStaff } from "../services/staffService";
 
 export const staffRoutes = Router();
-staffRoutes.use(requireAdmin, requireRole(["OWNER"]));
+staffRoutes.use(requireAdmin, requireRole(["OWNER", "MANAGER"]));
 
 const roles = ["OWNER", "MANAGER", "STAFF", "RECEPTION", "HOUSEKEEPING", "MAINTENANCE", "ACCOUNTANT"] as const;
 

@@ -16,7 +16,7 @@ adminRoutes.get("/admin/dashboard", asyncHandler(async (_req, res) => {
   res.json(ok(await getDashboardSummary(prisma)));
 }));
 
-adminRoutes.get("/admin/packages", asyncHandler(async (_req, res) => {
+adminRoutes.get("/admin/packages", requireRole(["OWNER", "MANAGER"]), asyncHandler(async (_req, res) => {
   res.json(ok(await listAdminPackages(prisma)));
 }));
 
@@ -92,7 +92,7 @@ const addOnSchema = z.object({
   active: z.boolean().default(true),
 });
 
-adminRoutes.get("/admin/add-ons", asyncHandler(async (_req, res) => {
+adminRoutes.get("/admin/add-ons", requireRole(["OWNER", "MANAGER"]), asyncHandler(async (_req, res) => {
   const addOns = await prisma.addOn.findMany({
     orderBy: [{ active: "desc" }, { name: "asc" }],
   });
